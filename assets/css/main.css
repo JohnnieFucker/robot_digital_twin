@@ -1,0 +1,424 @@
+/* 全局样式重置 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* 页面主体样式：深色渐变背景，禁止滚动 */
+body {
+    font-family: "Microsoft YaHei", Arial, sans-serif;
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    color: #fff;
+    overflow: hidden;
+    height: 100vh;
+}
+
+/* 主容器：水平布局 */
+#container {
+    display: flex;
+    height: 100vh;
+}
+
+/* 3D 视图容器：占据剩余空间 */
+#viewer-container {
+    flex: 1;
+    position: relative;
+    background: #000;
+}
+
+/* 右侧控制面板：固定宽度，半透明毛玻璃效果 */
+#control-panel {
+    width: 380px;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    overflow-y: auto;
+}
+
+/* 控制面板标题样式 */
+#control-panel h2 {
+    color: #4fc3f7;
+    margin-bottom: 20px;
+    text-align: center;
+    font-size: 1.5em;
+    text-shadow: 0 0 10px rgba(79, 195, 247, 0.5);
+}
+
+/* 关节分组容器样式 */
+.joint-group {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 关节分组标题样式 */
+.joint-group h3 {
+    color: #81c784;
+    margin-bottom: 15px;
+    font-size: 1.1em;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 8px;
+}
+
+/* 单个关节控制项样式 */
+.joint-control {
+    margin-bottom: 20px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+}
+
+/* 关节名称样式 */
+.joint-control h4 {
+    color: #ffb74d;
+    margin-bottom: 8px;
+    font-size: 0.95em;
+}
+
+/* 滑块容器布局 */
+.slider-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* 自定义滑块样式 */
+.slider {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.2);
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+/* 滑块手柄样式 (Chrome/Safari) */
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #4fc3f7;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(79, 195, 247, 0.5);
+}
+
+/* 滑块手柄样式 (Firefox) */
+.slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #4fc3f7;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 0 10px rgba(79, 195, 247, 0.5);
+}
+
+/* 数值显示框样式 */
+.value-display {
+    min-width: 70px;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-family: "Courier New", monospace;
+    font-size: 0.9em;
+}
+
+/* 按钮组布局 */
+.button-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+/* 通用按钮样式 */
+.btn {
+    flex: 1;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(45deg, #4fc3f7, #29b6f6);
+    color: white;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(79, 195, 247, 0.3);
+}
+
+/* 按钮悬停效果 */
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(79, 195, 247, 0.4);
+}
+
+/* 按钮点击效果 */
+.btn:active {
+    transform: translateY(0);
+}
+
+/* 危险按钮样式 (如紧急停止) */
+.btn.danger {
+    background: linear-gradient(45deg, #f44336, #d32f2f);
+    box-shadow: 0 4px 15px rgba(244, 67, 54, 0.3);
+}
+
+.btn.danger:hover {
+    box-shadow: 0 6px 20px rgba(244, 67, 54, 0.4);
+}
+
+/* 状态面板样式 */
+.status-panel {
+    margin-top: 20px;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.status-panel h4 {
+    color: #ffb74d;
+    margin-bottom: 10px;
+}
+
+/* 状态条目布局 */
+.status-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    font-size: 0.9em;
+}
+
+/* 加载动画容器 */
+#loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #4fc3f7;
+    font-size: 1.2em;
+    z-index: 1000;
+}
+
+/* 加载旋转动画 */
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(79, 195, 247, 0.3);
+    border-radius: 50%;
+    border-top-color: #4fc3f7;
+    animation: spin 1s ease-in-out infinite;
+    margin-right: 10px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* 错误信息提示框 */
+#error {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    background: rgba(244, 67, 54, 0.9);
+    color: white;
+    padding: 15px;
+    border-radius: 8px;
+    display: none;
+    z-index: 1000;
+}
+
+/* 信息面板样式 */
+.info-panel {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-size: 0.9em;
+    color: #ccc;
+}
+
+/* 视图控制网格布局 */
+.view-control-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 15px;
+    justify-items: center;
+}
+
+.view-control-btn {
+    width: 45px;
+    height: 45px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2em;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.view-control-btn:hover {
+    background: rgba(79, 195, 247, 0.3);
+    border-color: #4fc3f7;
+}
+
+.view-control-btn:active {
+    background: #4fc3f7;
+    transform: scale(0.95);
+}
+
+.view-control-label {
+    grid-column: span 3;
+    font-size: 0.85em;
+    color: #aaa;
+    margin-bottom: 5px;
+    text-align: left;
+    width: 100%;
+}
+
+/* 关节控制容器 */
+#joints-container {
+    margin-top: 10px;
+}
+
+.link-status-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 900;
+    display: none;
+    pointer-events: none;
+    background: rgba(0, 0, 0, 0.75);
+    border: 1px solid rgba(79, 195, 247, 0.55);
+    border-radius: 10px;
+    padding: 10px 12px;
+    min-width: 190px;
+    color: #e8f1ff;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(6px);
+}
+
+.link-status-title {
+    font-size: 0.95em;
+    font-weight: 600;
+    color: #4fc3f7;
+    margin-bottom: 8px;
+    white-space: nowrap;
+}
+
+.link-status-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 0.85em;
+    line-height: 1.45;
+    margin-top: 4px;
+    white-space: nowrap;
+}
+
+.link-status-key {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.link-status-val {
+    color: rgba(255, 255, 255, 0.95);
+    font-family: "Courier New", monospace;
+}
+
+/* 现场监控浮层样式 */
+.monitor-overlay-container {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    display: flex;
+    justify-content: center; /* 居中显示 */
+    gap: 20px;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+.monitor-card {
+    width: 20vw; /* 默认宽度，会被 JS 动态调整或保持比例 */
+    aspect-ratio: 16 / 9; /* 保持 16:9 比例 */
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(79, 195, 247, 0.3);
+    border-radius: 12px;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.monitor-header {
+    padding: 8px 15px;
+    background: rgba(79, 195, 247, 0.15);
+    border-bottom: 1px solid rgba(79, 195, 247, 0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.monitor-title {
+    color: #4fc3f7;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.monitor-title::before {
+    content: "";
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: #4caf50;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #4caf50;
+}
+
+.monitor-body {
+    flex: 1;
+    position: relative;
+    background: #000;
+}
+
+.monitor-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+.monitor-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 13px;
+    background: linear-gradient(45deg, #0a0a0a 25%, #111 25%, #111 50%, #0a0a0a 50%, #0a0a0a 75%, #111 75%, #111 100%);
+    background-size: 40px 40px;
+}
