@@ -3,319 +3,22 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>天工焊接机器人</title>
-        <style>
-            /* 全局样式重置 */
-            * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-            }
-
-            /* 页面主体样式：深色渐变背景，禁止滚动 */
-            body {
-                font-family: "Microsoft YaHei", Arial, sans-serif;
-                background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-                color: #fff;
-                overflow: hidden;
-                height: 100vh;
-            }
-
-            /* 主容器：水平布局 */
-            #container {
-                display: flex;
-                height: 100vh;
-            }
-
-            /* 3D 视图容器：占据剩余空间 */
-            #viewer-container {
-                flex: 1;
-                position: relative;
-                background: #000;
-            }
-
-            /* 右侧控制面板：固定宽度，半透明毛玻璃效果 */
-            #control-panel {
-                width: 380px;
-                background: rgba(0, 0, 0, 0.5);
-                backdrop-filter: blur(10px);
-                border-left: 1px solid rgba(255, 255, 255, 0.1);
-                padding: 20px;
-                overflow-y: auto;
-            }
-
-            /* 控制面板标题样式 */
-            #control-panel h2 {
-                color: #4fc3f7;
-                margin-bottom: 20px;
-                text-align: center;
-                font-size: 1.5em;
-                text-shadow: 0 0 10px rgba(79, 195, 247, 0.5);
-            }
-
-            /* 关节分组容器样式 */
-            .joint-group {
-                margin-bottom: 20px;
-                padding: 15px;
-                background: rgba(255, 255, 255, 0.05);
-                border-radius: 10px;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-            }
-
-            /* 关节分组标题样式 */
-            .joint-group h3 {
-                color: #81c784;
-                margin-bottom: 15px;
-                font-size: 1.1em;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-                padding-bottom: 8px;
-            }
-
-            /* 单个关节控制项样式 */
-            .joint-control {
-                margin-bottom: 20px;
-                padding: 12px;
-                background: rgba(0, 0, 0, 0.3);
-                border-radius: 8px;
-            }
-
-            /* 关节名称样式 */
-            .joint-control h4 {
-                color: #ffb74d;
-                margin-bottom: 8px;
-                font-size: 0.95em;
-            }
-
-            /* 滑块容器布局 */
-            .slider-container {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-            }
-
-            /* 自定义滑块样式 */
-            .slider {
-                flex: 1;
-                height: 6px;
-                border-radius: 3px;
-                background: rgba(255, 255, 255, 0.2);
-                outline: none;
-                appearance: none;
-                -webkit-appearance: none;
-            }
-
-            /* 滑块手柄样式 (Chrome/Safari) */
-            .slider::-webkit-slider-thumb {
-                -webkit-appearance: none;
-                appearance: none;
-                width: 20px;
-                height: 20px;
-                border-radius: 50%;
-                background: #4fc3f7;
-                cursor: pointer;
-                box-shadow: 0 0 10px rgba(79, 195, 247, 0.5);
-            }
-
-            /* 滑块手柄样式 (Firefox) */
-            .slider::-moz-range-thumb {
-                width: 20px;
-                height: 20px;
-                border-radius: 50%;
-                background: #4fc3f7;
-                cursor: pointer;
-                border: none;
-                box-shadow: 0 0 10px rgba(79, 195, 247, 0.5);
-            }
-
-            /* 数值显示框样式 */
-            .value-display {
-                min-width: 70px;
-                text-align: center;
-                background: rgba(0, 0, 0, 0.3);
-                padding: 5px 10px;
-                border-radius: 5px;
-                font-family: "Courier New", monospace;
-                font-size: 0.9em;
-            }
-
-            /* 按钮组布局 */
-            .button-group {
-                display: flex;
-                gap: 10px;
-                margin-top: 20px;
-                margin-bottom: 20px;
-            }
-
-            /* 通用按钮样式 */
-            .btn {
-                flex: 1;
-                padding: 10px 15px;
-                border: none;
-                border-radius: 8px;
-                background: linear-gradient(45deg, #4fc3f7, #29b6f6);
-                color: white;
-                cursor: pointer;
-                font-size: 0.9em;
-                transition: all 0.3s ease;
-                box-shadow: 0 4px 15px rgba(79, 195, 247, 0.3);
-            }
-
-            /* 按钮悬停效果 */
-            .btn:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 6px 20px rgba(79, 195, 247, 0.4);
-            }
-
-            /* 按钮点击效果 */
-            .btn:active {
-                transform: translateY(0);
-            }
-
-            /* 危险按钮样式 (如紧急停止) */
-            .btn.danger {
-                background: linear-gradient(45deg, #f44336, #d32f2f);
-                box-shadow: 0 4px 15px rgba(244, 67, 54, 0.3);
-            }
-
-            .btn.danger:hover {
-                box-shadow: 0 6px 20px rgba(244, 67, 54, 0.4);
-            }
-
-            /* 状态面板样式 */
-            .status-panel {
-                margin-top: 20px;
-                padding: 15px;
-                background: rgba(0, 0, 0, 0.3);
-                border-radius: 10px;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-            }
-
-            .status-panel h4 {
-                color: #ffb74d;
-                margin-bottom: 10px;
-            }
-
-            /* 状态条目布局 */
-            .status-item {
-                display: flex;
-                justify-content: space-between;
-                margin-bottom: 5px;
-                font-size: 0.9em;
-            }
-
-            /* 加载动画容器 */
-            #loading {
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                color: #4fc3f7;
-                font-size: 1.2em;
-                z-index: 1000;
-            }
-
-            /* 加载旋转动画 */
-            .loading-spinner {
-                display: inline-block;
-                width: 20px;
-                height: 20px;
-                border: 3px solid rgba(79, 195, 247, 0.3);
-                border-radius: 50%;
-                border-top-color: #4fc3f7;
-                animation: spin 1s ease-in-out infinite;
-                margin-right: 10px;
-            }
-
-            @keyframes spin {
-                to {
-                    transform: rotate(360deg);
-                }
-            }
-
-            /* 错误信息提示框 */
-            #error {
-                position: absolute;
-                top: 20px;
-                left: 20px;
-                right: 20px;
-                background: rgba(244, 67, 54, 0.9);
-                color: white;
-                padding: 15px;
-                border-radius: 8px;
-                display: none;
-                z-index: 1000;
-            }
-
-            /* 信息面板样式 */
-            .info-panel {
-                position: absolute;
-                bottom: 20px;
-                left: 20px;
-                background: rgba(0, 0, 0, 0.7);
-                padding: 10px 15px;
-                border-radius: 8px;
-                font-size: 0.9em;
-                color: #ccc;
-            }
-
-            /* 视图控制网格布局 */
-            .view-control-grid {
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                gap: 10px;
-                margin-bottom: 15px;
-                justify-items: center;
-            }
-
-            .view-control-btn {
-                width: 45px;
-                height: 45px;
-                padding: 0;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 1.2em;
-                background: rgba(255, 255, 255, 0.1);
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                border-radius: 8px;
-                color: white;
-                cursor: pointer;
-                transition: all 0.2s;
-            }
-
-            .view-control-btn:hover {
-                background: rgba(79, 195, 247, 0.3);
-                border-color: #4fc3f7;
-            }
-
-            .view-control-btn:active {
-                background: #4fc3f7;
-                transform: scale(0.95);
-            }
-
-            .view-control-label {
-                grid-column: span 3;
-                font-size: 0.85em;
-                color: #aaa;
-                margin-bottom: 5px;
-                text-align: left;
-                width: 100%;
-            }
-
-            /* 关节控制容器 */
-            #joints-container {
-                margin-top: 10px;
-            }
-        </style>
+        <title>膜式壁焊接机器人产线</title>
+        <link rel="stylesheet" href="assets/css/main.css" />
     </head>
     <body>
         <div id="container">
             <!-- 左侧 3D 渲染区域 -->
             <div id="viewer-container">
+                <!-- 现场监控浮层 -->
+                <div class="monitor-overlay-container" id="monitor-container">
+                    <!-- 动态生成监控卡片 -->
+                </div>
+
                 <!-- 加载提示 -->
                 <div id="loading">
                     <div class="loading-spinner"></div>
-                    正在加载天工焊接机器人模型...
+                    正在加载膜式壁焊接机器人产线模型...
                 </div>
                 <!-- 错误提示 -->
                 <div id="error"></div>
@@ -323,80 +26,11 @@
 
             <!-- 右侧控制面板区域 -->
             <div id="control-panel">
-                <h2>🏭 天工焊接机器人控制面板</h2>
+                <h2>控制面板</h2>
 
                 <!-- 动态生成的关节控制滑块将插入此处 -->
                 <div id="joints-container">
                     <!-- 动态生成的关节控制界面 -->
-                </div>
-
-                <!-- 视图控制面板 -->
-                <div class="joint-group">
-                    <h3>🎮 视图控制 (View Control)</h3>
-
-                    <!-- 旋转控制 (替代左键拖拽) -->
-                    <div class="view-control-label">旋转 (Rotate - Left Mouse)</div>
-                    <div class="view-control-grid">
-                        <div></div>
-                        <button class="view-control-btn" id="rot-up" title="向上旋转">▲</button>
-                        <div></div>
-                        <button class="view-control-btn" id="rot-left" title="向左旋转">◀</button>
-                        <button class="view-control-btn" id="rot-down" title="向下旋转">▼</button>
-                        <button class="view-control-btn" id="rot-right" title="向右旋转">▶</button>
-                    </div>
-
-                    <!-- 平移控制 (替代右键拖拽) -->
-                    <div class="view-control-label">平移 (Pan - Right Mouse)</div>
-                    <div class="view-control-grid">
-                        <div></div>
-                        <button class="view-control-btn" id="pan-up" title="向上平移">▲</button>
-                        <div></div>
-                        <button class="view-control-btn" id="pan-left" title="向左平移">◀</button>
-                        <button class="view-control-btn" id="pan-down" title="向下平移">▼</button>
-                        <button class="view-control-btn" id="pan-right" title="向右平移">▶</button>
-                    </div>
-
-                    <!-- 缩放控制 (替代滚轮) -->
-                    <div class="view-control-label">缩放 (Zoom - Scroll)</div>
-                    <div class="button-group" style="margin-top: 5px; margin-bottom: 0">
-                        <button class="btn" id="zoom-in">放大 (+)</button>
-                        <button class="btn" id="zoom-out">缩小 (-)</button>
-                    </div>
-                </div>
-
-                <!-- 相机调试参数面板 -->
-                <div class="joint-group">
-                    <h3>📌 当前相机参数 (调试用)</h3>
-                    <div class="status-panel" style="background: rgba(0, 0, 0, 0.5); margin-top: 0">
-                        <div class="status-item">
-                            <span>位置 (Position):</span>
-                            <code id="cam-pos-debug" style="color: #4fc3f7">x:0, y:0, z:0</code>
-                        </div>
-                        <div class="status-item">
-                            <span>目标 (Target):</span>
-                            <code id="cam-target-debug" style="color: #81c784">x:0, y:0, z:0</code>
-                        </div>
-                        <div class="status-item">
-                            <span>旋转 (Quaternion):</span>
-                            <code id="cam-quat-debug" style="color: #ffb74d; font-size: 0.8em">x:0, y:0, z:0, w:1</code>
-                        </div>
-                        <div class="status-item">
-                            <span>距离 (Distance):</span>
-                            <code id="cam-dist-debug" style="color: #a29bfe">0.00</code>
-                        </div>
-                        <div style="margin-top: 10px; font-size: 0.8em; color: #aaa; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 5px">提示：拖动相机后，可将上述参数填入 setupCamera 和 setupControls 中。</div>
-                    </div>
-                </div>
-
-                <!-- 操作按钮组 -->
-                <div class="button-group">
-                    <button class="btn" id="reset-btn">重置位置</button>
-                    <button class="btn" id="home-btn">回零位</button>
-                </div>
-
-                <!-- 紧急操作按钮 -->
-                <div class="button-group">
-                    <button class="btn danger" id="emergency-btn">紧急停止</button>
                 </div>
             </div>
         </div>
@@ -405,6 +39,8 @@
             import * as THREE from "./assets/js/three.module.js";
             import { OrbitControls } from "./assets/js/OrbitControls.js";
             import URDFLoader from "./assets/js/URDFLoader.js";
+
+            THREE.Object3D.DEFAULT_UP.set(0, 0, 1);
 
             /**
              * 天工机器人仿真器类
@@ -422,6 +58,15 @@
                     this.robot = null; // 加载后的机器人模型对象
                     this.joints = {}; // 存储机器人所有可动关节的引用
                     this.jointControls = {}; // 存储 UI 控制滑块的引用
+                    this.overlays = new Map(); // 用于存储不同 Link 对应的 DOM 元素和配置
+
+                    this.linkStatus = {
+                        el: null,
+                        target: null,
+                        targetLinkName: "Link1",
+                        worldOffset: new THREE.Vector3(0, 0, 3.5),
+                        lastContentUpdateMs: 0
+                    };
 
                     // 状态标志
                     this.isLoaded = false; // 模型是否加载完成
@@ -432,8 +77,57 @@
                     this.frameCount = 0;
                     this.fps = 0;
 
+                    // --- 配置：默认视图中心点 ---
+                    // 修改这里的 x, y, z 可以调整画面默认对准的位置
+                    // 例如：设置为 (0, 0, 5) 可以让视点抬高，机器人底座会显示在屏幕偏下方
+                    this.defaultViewCenter = new THREE.Vector3(0, 0, 3);
+
+                    // --- 配置：默认相机位置（决定初始缩放） ---
+                    // 离 defaultViewCenter 越近，模型看起来越大；越远则越小
+                    // 建议保持与 defaultViewCenter 一定的距离和角度
+                    this.defaultCameraPosition = new THREE.Vector3(20, 20, 15);
+
                     // 启动初始化
                     this.init();
+                    this.setupMonitors();
+                }
+
+                /**
+                 * 初始化监控卡片
+                 */
+                setupMonitors() {
+                    const monitorConfig = [
+                        {
+                            title: "现场监控 - 1号工位",
+                            url: "https://pv-monitor.cgboiler.com/?y1=rtsp://admin:center123@10.13.75.77/cam/realmonitor?channel=1&subtype=1"
+                        },
+                        {
+                            title: "现场监控 - 2号工位",
+                            url: "" // 空字符串表示占位
+                        },
+                        {
+                            title: "现场监控 - 3号工位",
+                            url: ""
+                        }
+                    ];
+
+                    const container = document.getElementById("monitor-container");
+                    if (!container) return;
+
+                    container.innerHTML = monitorConfig
+                        .map(
+                            (config) => `
+                        <div class="monitor-card">
+                            <div class="monitor-header">
+                                <div class="monitor-title">${config.title}</div>
+                            </div>
+                            <div class="monitor-body">
+                                ${config.url ? `<iframe class="monitor-iframe" src="${config.url}" allow="autoplay; fullscreen"></iframe>` : `<div class="monitor-placeholder">等待信号接入...</div>`}
+                            </div>
+                        </div>
+                    `
+                        )
+                        .join("");
                 }
 
                 /**
@@ -460,20 +154,79 @@
                     // 添加坐标系转换容器，用于统一管理模型和辅助线
                     this.coordinateFrame = new THREE.Group();
                     this.scene.add(this.coordinateFrame);
+
+                    // 添加辅助线（X:红色，Y:绿色，Z:蓝色）
+                    const axesHelper = new THREE.AxesHelper(5); // 辅助线长度为 10 单位
+                    this.coordinateFrame.add(axesHelper);
+                    // 增加xyz标签
+                    const xLabel = this.createTextLabel("X", "#ff0000");
+                    const yLabel = this.createTextLabel("Y", "#00ff00");
+                    const zLabel = this.createTextLabel("Z", "#0000ff");
+                    xLabel.position.set(6, 0, 0);
+                    yLabel.position.set(0, 6, 0);
+                    zLabel.position.set(0, 0, 6);
+                    this.coordinateFrame.add(xLabel, yLabel, zLabel);
+
+                    // 增加场景网格（位于 XY 平面）
+                    const gridHelper = new THREE.GridHelper(40, 40); // 网格大小为 100x100，100 个单位间隔
+                    gridHelper.rotation.x = Math.PI / 2; // 旋转 90 度，使其位于 XY 平面
+                    gridHelper.material.opacity = 0.25; // 设置透明度
+                    gridHelper.material.transparent = true; // 开启透明
+                    this.coordinateFrame.add(gridHelper); // 添加到坐标系容器中
+                }
+
+                /**
+                 * 使用 CanvasTexture + Sprite 生成文字标签
+                 * @param {string} text - 显示的文字
+                 * @param {string} color - 文字颜色 (CSS 格式)
+                 * @returns {THREE.Sprite}
+                 */
+                createTextLabel(text, color) {
+                    const canvas = document.createElement("canvas");
+                    const context = canvas.getContext("2d");
+                    const size = 64; // 画布大小，越大越清晰但消耗内存
+                    canvas.width = size;
+                    canvas.height = size;
+
+                    // 设置字体样式
+                    context.font = "bold 48px Arial";
+                    context.textAlign = "center";
+                    context.textBaseline = "middle";
+                    context.fillStyle = color;
+
+                    // 绘制文字
+                    context.fillText(text, size / 2, size / 2);
+
+                    // 生成贴图
+                    const texture = new THREE.CanvasTexture(canvas);
+
+                    // 生成精灵材质
+                    const material = new THREE.SpriteMaterial({
+                        map: texture,
+                        transparent: true,
+                        depthTest: false // 确保文字始终显示在前面（可选）
+                    });
+
+                    // 生成精灵对象
+                    const sprite = new THREE.Sprite(material);
+                    // 调整缩放比例，根据场景单位调整
+                    sprite.scale.set(1, 1, 1);
+                    return sprite;
                 }
 
                 /**
                  * 配置相机初始位置
-                 * 你可以手动修改这里的 set(-13.71, 25.0, 6.95) 来调整相机在空间中的坐标
                  */
                 setupCamera() {
                     const container = document.getElementById("viewer-container");
                     // 创建透视相机：视角 45度，宽高比，近裁剪面 0.1，远裁剪面 1000
                     this.camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+                    this.camera.up.set(0, 0, 1);
 
-                    // --- 用户指定精确视角 ---
-                    this.camera.position.set(-14.19, 24.09, 5.09);
-                    this.camera.quaternion.set(0, 0.707, 0.707, 0);
+                    // 设置相机位置（相对原点的偏移）
+                    this.camera.position.copy(this.defaultCameraPosition);
+                    // 让相机看向默认视图中心
+                    this.camera.lookAt(this.defaultViewCenter);
                 }
 
                 /**
@@ -501,7 +254,7 @@
                     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
 
                     // --- 用户指定精确目标点 ---
-                    this.controls.target.set(-14.19, 0.0, 5.09);
+                    this.controls.target.copy(this.defaultViewCenter);
 
                     this.controls.enableDamping = true;
                     this.controls.dampingFactor = 0.05;
@@ -534,15 +287,33 @@
                  */
                 setupLights() {
                     // 半球光：模拟环境光，从天空到地面的渐变
-                    const ambientLight = new THREE.HemisphereLight(0xffffff, 0x202020, 0.6);
+                    // 提高强度从 0.6 到 1.0
+                    const ambientLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0);
                     this.scene.add(ambientLight);
 
-                    // 方向光：模拟太阳光，产生阴影
-                    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-                    directionalLight.position.set(5, 5, 5);
-                    directionalLight.castShadow = true; // 开启投射阴影
+                    // 主方向光：模拟太阳光，产生阴影
+                    // 提高强度从 0.8 到 1.5
+                    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
+                    directionalLight.position.set(10, 20, 10);
+                    directionalLight.castShadow = true;
+
+                    // 配置阴影质量
+                    directionalLight.shadow.mapSize.width = 2048;
+                    directionalLight.shadow.mapSize.height = 2048;
+                    directionalLight.shadow.camera.near = 0.5;
+                    directionalLight.shadow.camera.far = 500;
 
                     this.scene.add(directionalLight);
+
+                    // 补光：从反方向照射，减少阴影处的死黑
+                    const fillLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                    fillLight.position.set(-10, 10, -10);
+                    this.scene.add(fillLight);
+
+                    // 顶光：增加金属质感
+                    const topLight = new THREE.PointLight(0xffffff, 1.0);
+                    topLight.position.set(0, 50, 0);
+                    this.scene.add(topLight);
                 }
 
                 /**
@@ -552,98 +323,10 @@
                     // 窗口大小调整：自动适配渲染器和相机
                     window.addEventListener("resize", () => this.onWindowResize());
 
-                    // 按钮点击事件
-                    document.getElementById("reset-btn").addEventListener("click", () => this.resetPosition());
-                    document.getElementById("home-btn").addEventListener("click", () => this.goHome());
-                    document.getElementById("emergency-btn").addEventListener("click", () => this.emergencyStop());
-
                     // 监听相机变化并更新调试信息
                     this.controls.addEventListener("change", () => this.updateCameraDebugInfo());
                     // 初始化显示一次
                     this.updateCameraDebugInfo();
-
-                    // 视图控制按钮绑定
-                    const step = 0.1; // 旋转步长
-                    const panStep = 0.5; // 平移步长
-                    const zoomStep = 0.9; // 缩放系数
-
-                    // 旋转
-                    document.getElementById("rot-up").onclick = () => this.rotateView(0, -step);
-                    document.getElementById("rot-down").onclick = () => this.rotateView(0, step);
-                    document.getElementById("rot-left").onclick = () => this.rotateView(-step, 0);
-                    document.getElementById("rot-right").onclick = () => this.rotateView(step, 0);
-
-                    // 平移
-                    document.getElementById("pan-up").onclick = () => this.panView(0, panStep);
-                    document.getElementById("pan-down").onclick = () => this.panView(0, -panStep);
-                    document.getElementById("pan-left").onclick = () => this.panView(-panStep, 0);
-                    document.getElementById("pan-right").onclick = () => this.panView(panStep, 0);
-
-                    // 缩放
-                    document.getElementById("zoom-in").onclick = () => this.zoomView(zoomStep);
-                    document.getElementById("zoom-out").onclick = () => this.zoomView(1 / zoomStep);
-                }
-
-                /**
-                 * 旋转视图
-                 * @param {number} deltaAzimuth 水平旋转弧度
-                 * @param {number} deltaPolar 垂直旋转弧度
-                 */
-                rotateView(deltaAzimuth, deltaPolar) {
-                    const lookAt = this.controls.target;
-                    const offset = new THREE.Vector3().subVectors(this.camera.position, lookAt);
-                    const spherical = new THREE.Spherical().setFromVector3(offset);
-
-                    spherical.theta += deltaAzimuth;
-                    spherical.phi += deltaPolar;
-
-                    // 限制垂直旋转范围，防止相机翻转
-                    spherical.phi = Math.max(this.controls.minPolarAngle, Math.min(this.controls.maxPolarAngle, spherical.phi));
-
-                    offset.setFromSpherical(spherical);
-                    this.camera.position.copy(lookAt).add(offset);
-                    this.controls.update();
-                }
-
-                /**
-                 * 平移视图
-                 * @param {number} deltaX 水平平移距离
-                 * @param {number} deltaY 垂直平移距离
-                 */
-                panView(deltaX, deltaY) {
-                    const offset = new THREE.Vector3();
-                    const matrix = new THREE.Matrix4();
-                    matrix.extractRotation(this.camera.matrix);
-
-                    // 计算相机本地坐标系的 X 和 Y 轴
-                    const left = new THREE.Vector3(-1, 0, 0).applyMatrix4(matrix);
-                    const up = new THREE.Vector3(0, 1, 0).applyMatrix4(matrix);
-
-                    offset.addScaledVector(left, deltaX);
-                    offset.addScaledVector(up, deltaY);
-
-                    this.camera.position.add(offset);
-                    this.controls.target.add(offset);
-                    this.controls.update();
-                }
-
-                /**
-                 * 缩放视图
-                 * @param {number} factor 缩放因子
-                 */
-                zoomView(factor) {
-                    const lookAt = this.controls.target;
-                    const offset = new THREE.Vector3().subVectors(this.camera.position, lookAt);
-
-                    offset.multiplyScalar(factor);
-
-                    // 限制缩放距离
-                    const dist = offset.length();
-                    if (dist < this.controls.minDistance) offset.setLength(this.controls.minDistance);
-                    if (dist > this.controls.maxDistance) offset.setLength(this.controls.maxDistance);
-                    console.log(offset.length());
-                    this.camera.position.copy(lookAt).add(offset);
-                    this.controls.update();
                 }
 
                 /**
@@ -654,14 +337,6 @@
                     const pos = this.camera.position;
                     const target = this.controls.target;
                     const quat = this.camera.quaternion;
-
-                    const posEl = document.getElementById("cam-pos-debug");
-                    const targetEl = document.getElementById("cam-target-debug");
-                    const quatEl = document.getElementById("cam-quat-debug");
-
-                    if (posEl) posEl.textContent = `x:${pos.x.toFixed(2)}, y:${pos.y.toFixed(2)}, z:${pos.z.toFixed(2)}`;
-                    if (targetEl) targetEl.textContent = `x:${target.x.toFixed(2)}, y:${target.y.toFixed(2)}, z:${target.z.toFixed(2)}`;
-                    if (quatEl) quatEl.textContent = `x:${quat.x.toFixed(3)}, y:${quat.y.toFixed(3)}, z:${quat.z.toFixed(3)}, w:${quat.w.toFixed(3)}`;
 
                     // 在控制台输出可以直接复制的代码片段
                     console.log(`相机配置代码:
@@ -690,6 +365,12 @@ this.camera.quaternion.set(${quat.x.toFixed(3)}, ${quat.y.toFixed(3)}, ${quat.z.
                         });
 
                         this.robot = robot;
+
+                        // --- 设置机器人偏移 ---
+                        // 你可以在这里调整机器人的位置 (x, y, z) 和旋转 (x, y, z)
+                        robot.position.set(14, 0, 0); // 例如: robot.position.set(0, 1, 0) 将其抬高 1 单位
+                        // robot.rotation.set(0, 0, 0); // 例如: robot.rotation.x = -Math.PI / 2;
+                        robot.rotation.z = -Math.PI / 2;
                         this.coordinateFrame.add(robot);
 
                         // 更新世界矩阵以计算正确的边界框
@@ -719,8 +400,11 @@ this.camera.quaternion.set(${quat.x.toFixed(3)}, ${quat.y.toFixed(3)}, ${quat.z.
 
                         // 初始化关节控制界面
                         this.setupJointInterface();
+                        this.setupBaseReferenceLines(); // 修改：设置 base_link 参考线
                         this.isLoaded = true;
                         this.showLoading(false);
+                        this.setLinkOverlay("Link1", "步兵1号", { 运行: "在线", 模式: "单机" }, new THREE.Vector3(0, 0, 3.8));
+                        this.setLinkOverlay("Link2", "步兵2号", { 运行: "在线", 模式: "单机" }, new THREE.Vector3(0, 0, 1.5));
                     } catch (error) {
                         console.error("加载机器人失败:", error);
                         this.showError("加载机器人模型失败: " + error.message);
@@ -744,7 +428,7 @@ this.camera.quaternion.set(${quat.x.toFixed(3)}, ${quat.y.toFixed(3)}, ${quat.z.
                     // 创建一个分组容器
                     const group = document.createElement("div");
                     group.className = "joint-group";
-                    group.innerHTML = "<h3>🎮 关节控制</h3>";
+                    group.innerHTML = "<h3>关节控制</h3>";
 
                     joints.forEach((joint) => {
                         this.joints[joint.name] = joint;
@@ -754,8 +438,8 @@ this.camera.quaternion.set(${quat.x.toFixed(3)}, ${quat.y.toFixed(3)}, ${quat.z.
                         control.className = "joint-control";
 
                         // 获取关节限制范围 (弧度)
-                        const min = joint.limit.lower || -Math.PI;
-                        const max = joint.limit.upper || Math.PI;
+                        const min = joint.limit.lower;
+                        const max = joint.limit.upper;
                         const step = 0.01;
 
                         control.innerHTML = `
@@ -788,6 +472,53 @@ this.camera.quaternion.set(${quat.x.toFixed(3)}, ${quat.y.toFixed(3)}, ${quat.z.
                     container.appendChild(group);
                 }
 
+                setupBaseReferenceLines() {
+                    // 获取 base_link 对象
+                    const baseLink = this.robot.links["base_link"];
+                    if (!baseLink) return;
+
+                    // 创建参考线容器
+                    const refGroup = new THREE.Group();
+                    refGroup.name = "Base_Reference_Lines";
+                    baseLink.add(refGroup);
+
+                    const maxLength = 28;
+                    const step = 0.5;
+                    let tickSize = 0.2;
+
+                    // 1. 绘制主轴线 (X方向)
+                    const lineGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-1.5, 0, 0), new THREE.Vector3(-1.5, -maxLength, 0)]);
+                    const lineMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 2 });
+                    const mainLine = new THREE.Line(lineGeometry, lineMaterial);
+                    refGroup.add(mainLine);
+
+                    // 2. 绘制刻度和数字
+                    for (let d = 0; d <= maxLength; d += step) {
+                        // 刻度线
+                        console.log(d * 10);
+                        if ((d * 10) % 2 == 0) {
+                            tickSize = 0.5;
+                        } else {
+                            tickSize = 0.2;
+                        }
+                        console.log(tickSize);
+                        const tickGeom = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-1.5, -d, 0), new THREE.Vector3(-tickSize - 1.5, -d, 0)]);
+                        const tick = new THREE.Line(tickGeom, lineMaterial);
+                        refGroup.add(tick);
+
+                        // 数字标签
+                        const label = this.createTextLabel((d * 10) % 2 == 0 ? d : d.toFixed(1), "#ffffff");
+                        label.position.set(-2.5, -d, 0);
+                        if ((d * 10) % 2 == 0) {
+                            label.scale.set(0.3, 0.3, 0.3);
+                        } else {
+                            label.scale.set(0.2, 0.2, 0.2);
+                        }
+
+                        refGroup.add(label);
+                    }
+                }
+
                 /**
                  * 设置特定关节的数值
                  * @param {string} name 关节名称
@@ -800,31 +531,113 @@ this.camera.quaternion.set(${quat.x.toFixed(3)}, ${quat.y.toFixed(3)}, ${quat.z.
                 }
 
                 /**
+                 * 配置或添加一个状态面板
+                 * @param {string} linkName URDF中的Link名称
+                 * @param {Object} data 自定义数据对象
+                 * @param {THREE.Vector3} offset 相对于Link中心的世界偏移
+                 */
+                setLinkOverlay(linkName, robotName, data = {}, offset = new THREE.Vector3(0, 0, 2)) {
+                    if (!this.robot) return;
+
+                    // 获取目标 Link 对象
+                    const target = this.robot.links[linkName] || this.robot.getObjectByName(linkName);
+                    if (!target) {
+                        console.warn(`未找到 Link: ${linkName}`);
+                        return;
+                    }
+
+                    // 如果该 Link 的面板不存在，则创建
+                    if (!this.overlays.has(robotName)) {
+                        const el = document.createElement("div");
+                        el.className = "link-status-overlay";
+                        document.getElementById("viewer-container").appendChild(el);
+
+                        this.overlays.set(robotName, {
+                            el,
+                            target,
+                            offset,
+                            data,
+                            lastUpdate: 0
+                        });
+                    } else {
+                        // 如果已存在，则更新数据
+                        const entry = this.overlays.get(robotName);
+                        entry.data = { ...entry.data, ...data };
+                    }
+                }
+                updateAllOverlays() {
+                    if (!this.camera || this.overlays.size === 0) return;
+
+                    const container = document.getElementById("viewer-container");
+                    const rect = container.getBoundingClientRect();
+                    const now = performance.now();
+
+                    this.overlays.forEach((info, linkName) => {
+                        const { el, target, offset, data, lastUpdate } = info;
+
+                        // 1. 每 200ms 更新一次文字内容，避免性能损耗
+                        if (now - info.lastUpdate > 1000) {
+                            this.renderOverlayHTML(el, linkName, data);
+                            info.lastUpdate = now;
+                        }
+
+                        // 2. 计算空间坐标
+                        const worldPos = new THREE.Vector3();
+                        target.getWorldPosition(worldPos);
+                        worldPos.add(offset);
+
+                        // 将世界坐标投影到屏幕空间
+                        const ndc = worldPos.clone().project(this.camera);
+
+                        // 剔除相机背后的点
+                        if (ndc.z < -1 || ndc.z > 1) {
+                            el.style.display = "none";
+                            return;
+                        }
+
+                        // 转换像素坐标
+                        const x = (ndc.x * 0.5 + 0.5) * rect.width;
+                        const y = (-ndc.y * 0.5 + 0.5) * rect.height;
+
+                        el.style.display = "block";
+                        el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -110%)`;
+                    });
+                }
+
+                /**
+                 * 内部方法：渲染 HTML 模板
+                 */
+                renderOverlayHTML(el, title, data) {
+                    const timeStr = new Date().toLocaleTimeString("zh-CN", { hour12: false });
+
+                    // 动态生成行
+                    const rows = Object.entries(data)
+                        .map(
+                            ([key, val]) => `
+                        <div class="link-status-row">
+                            <span class="link-status-key">${key}</span>
+                            <span class="link-status-val">${val}</span>
+                        </div>
+                    `
+                        )
+                        .join("");
+
+                    el.innerHTML = `
+                        <div class="link-status-title">${title} 状态</div>
+                        ${rows}
+                        <div class="link-status-row"><span class="link-status-key">刷新</span><span class="link-status-val">${timeStr}</span></div>
+                    `;
+                }
+
+                /**
                  * 渲染循环
                  */
                 animate() {
-                    this.animationId = requestAnimationFrame(() => this.animate());
-
-                    // 更新控制器状态
-                    if (this.controls) {
-                        // 如果用户还没有操作过，强制锁定到您要求的精确参数
-                        if (!this.userInteracted) {
-                            this.camera.position.set(-14.19, 24.09, 5.09);
-                            this.camera.quaternion.set(0, 0.707, 0.707, 0);
-                            this.controls.target.set(-14.19, 0, 5.09);
-                            // 在锁定状态下，不调用 controls.update()，防止它重算旋转
-                        } else {
-                            this.controls.update();
-                        }
-                    }
-
-                    // 执行渲染
+                    requestAnimationFrame(() => this.animate());
                     if (this.renderer && this.scene && this.camera) {
                         this.renderer.render(this.scene, this.camera);
                     }
-
-                    // 计算 FPS
-                    this.updateFPS();
+                    this.updateAllOverlays(); // 使用新方法
                 }
 
                 /**
@@ -856,41 +669,6 @@ this.camera.quaternion.set(${quat.x.toFixed(3)}, ${quat.y.toFixed(3)}, ${quat.z.
 
                     // 更新渲染器尺寸
                     this.renderer.setSize(width, height);
-                }
-
-                /**
-                 * 重置相机位置到初始配置
-                 */
-                resetPosition() {
-                    // 这里的坐标应与 setupCamera 和 setupControls 中的初始值一致
-                    this.camera.position.set(-14.19, 24.09, 5.09);
-                    this.camera.up.set(0, -1, 0);
-                    this.controls.target.set(-14.19, 0, 5.09);
-                    this.controls.update();
-                    this.camera.quaternion.set(0, 0.707, 0.707, 0);
-                    this.controls.update();
-                    this.camera.quaternion.set(0, 0.707, 0.707, 0);
-                }
-
-                /**
-                 * 将所有关节归零
-                 */
-                goHome() {
-                    Object.keys(this.joints).forEach((name) => {
-                        this.setJointValue(name, 0);
-                        if (this.jointControls[name]) {
-                            this.jointControls[name].slider.value = 0;
-                            this.jointControls[name].display.textContent = "0.00";
-                        }
-                    });
-                }
-
-                /**
-                 * 紧急停止 (目前实现为归零，可根据需求修改)
-                 */
-                emergencyStop() {
-                    console.warn("紧急停止触发！");
-                    this.goHome();
                 }
 
                 /**
