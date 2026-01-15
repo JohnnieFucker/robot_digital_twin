@@ -5,6 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>膜式壁焊接机器人产线</title>
         <link rel="stylesheet" href="assets/css/main.css" />
+        <script src="assets/js/mqttws31.min.js"></script>
     </head>
     <body>
         <div id="container">
@@ -36,668 +37,71 @@
         </div>
 
         <script type="module">
-            import * as THREE from "./assets/js/three.module.js";
-            import { OrbitControls } from "./assets/js/OrbitControls.js";
-            import URDFLoader from "./assets/js/URDFLoader.js";
-
-            THREE.Object3D.DEFAULT_UP.set(0, 0, 1);
-
-            /**
-             * 天工机器人仿真器类
-             * 负责 3D 场景初始化、模型加载、关节控制及交互逻辑
-             */
-            class TiangongSimulator {
-                constructor() {
-                    // Three.js 核心组件
-                    this.scene = null; // 场景
-                    this.camera = null; // 相机
-                    this.renderer = null; // 渲染器
-                    this.controls = null; // 轨道控制器 (OrbitControls)
-
-                    // 机器人模型相关
-                    this.robot = null; // 加载后的机器人模型对象
-                    this.joints = {}; // 存储机器人所有可动关节的引用
-                    this.jointControls = {}; // 存储 UI 控制滑块的引用
-                    this.overlays = new Map(); // 用于存储不同 Link 对应的 DOM 元素和配置
-
-                    this.linkStatus = {
-                        el: null,
-                        target: null,
-                        targetLinkName: "Link1",
-                        worldOffset: new THREE.Vector3(0, 0, 3.5),
-                        lastContentUpdateMs: 0
-                    };
-
-                    // 状态标志
-                    this.isLoaded = false; // 模型是否加载完成
-
-                    // 动画与性能监控
-                    this.animationId = null;
-                    this.lastTime = 0;
-                    this.frameCount = 0;
-                    this.fps = 0;
-
-                    // --- 配置：默认视图中心点 ---
-                    // 修改这里的 x, y, z 可以调整画面默认对准的位置
-                    // 例如：设置为 (0, 0, 5) 可以让视点抬高，机器人底座会显示在屏幕偏下方
-                    this.defaultViewCenter = new THREE.Vector3(0, 0, 3);
-
-                    // --- 配置：默认相机位置（决定初始缩放） ---
-                    // 离 defaultViewCenter 越近，模型看起来越大；越远则越小
-                    // 建议保持与 defaultViewCenter 一定的距离和角度
-                    this.defaultCameraPosition = new THREE.Vector3(20, 20, 15);
-
-                    // 启动初始化
-                    this.init();
-                    this.setupMonitors();
-                }
-
-                /**
-                 * 初始化监控卡片
-                 */
-                setupMonitors() {
-                    const monitorConfig = [
-                        {
-                            title: "现场监控 - 1号工位",
-                            url: "https://pv-monitor.cgboiler.com/?y1=rtsp://admin:center123@10.13.75.77/cam/realmonitor?channel=1&subtype=1"
-                        },
-                        {
-                            title: "现场监控 - 2号工位",
-                            url: "" // 空字符串表示占位
-                        },
-                        {
-                            title: "现场监控 - 3号工位",
-                            url: ""
-                        }
-                    ];
-
-                    const container = document.getElementById("monitor-container");
-                    if (!container) return;
-
-                    container.innerHTML = monitorConfig
-                        .map(
-                            (config) => `
-                        <div class="monitor-card">
-                            <div class="monitor-header">
-                                <div class="monitor-title">${config.title}</div>
-                            </div>
-                            <div class="monitor-body">
-                                ${config.url ? `<iframe class="monitor-iframe" src="${config.url}" allow="autoplay; fullscreen"></iframe>` : `<div class="monitor-placeholder">等待信号接入...</div>`}
-                            </div>
-                        </div>
-                    `
-                        )
-                        .join("");
-                }
-
-                /**
-                 * 初始化流程
-                 */
-                init() {
-                    this.setupScene(); // 1. 创建场景与坐标系
-                    this.setupCamera(); // 2. 配置相机
-                    this.setupRenderer(); // 3. 配置渲染器
-                    this.setupControls(); // 4. 配置控制器
-                    this.setupLights(); // 5. 添加灯光
-                    this.setupEventListeners(); // 6. 绑定事件
-                    this.loadRobot(); // 7. 加载 URDF 模型
-                    this.animate(); // 8. 开始渲染循环
-                }
-
-                /**
-                 * 配置 3D 场景
-                 */
-                setupScene() {
-                    this.scene = new THREE.Scene();
-                    this.scene.background = new THREE.Color(0x001a33); // 设置背景色为深蓝色
-
-                    // 添加坐标系转换容器，用于统一管理模型和辅助线
-                    this.coordinateFrame = new THREE.Group();
-                    this.scene.add(this.coordinateFrame);
-
-                    // 添加辅助线（X:红色，Y:绿色，Z:蓝色）
-                    const axesHelper = new THREE.AxesHelper(5); // 辅助线长度为 10 单位
-                    this.coordinateFrame.add(axesHelper);
-                    // 增加xyz标签
-                    const xLabel = this.createTextLabel("X", "#ff0000");
-                    const yLabel = this.createTextLabel("Y", "#00ff00");
-                    const zLabel = this.createTextLabel("Z", "#0000ff");
-                    xLabel.position.set(6, 0, 0);
-                    yLabel.position.set(0, 6, 0);
-                    zLabel.position.set(0, 0, 6);
-                    this.coordinateFrame.add(xLabel, yLabel, zLabel);
-
-                    // 增加场景网格（位于 XY 平面）
-                    const gridHelper = new THREE.GridHelper(40, 40); // 网格大小为 100x100，100 个单位间隔
-                    gridHelper.rotation.x = Math.PI / 2; // 旋转 90 度，使其位于 XY 平面
-                    gridHelper.material.opacity = 0.25; // 设置透明度
-                    gridHelper.material.transparent = true; // 开启透明
-                    this.coordinateFrame.add(gridHelper); // 添加到坐标系容器中
-                }
-
-                /**
-                 * 使用 CanvasTexture + Sprite 生成文字标签
-                 * @param {string} text - 显示的文字
-                 * @param {string} color - 文字颜色 (CSS 格式)
-                 * @returns {THREE.Sprite}
-                 */
-                createTextLabel(text, color) {
-                    const canvas = document.createElement("canvas");
-                    const context = canvas.getContext("2d");
-                    const size = 64; // 画布大小，越大越清晰但消耗内存
-                    canvas.width = size;
-                    canvas.height = size;
-
-                    // 设置字体样式
-                    context.font = "bold 48px Arial";
-                    context.textAlign = "center";
-                    context.textBaseline = "middle";
-                    context.fillStyle = color;
-
-                    // 绘制文字
-                    context.fillText(text, size / 2, size / 2);
-
-                    // 生成贴图
-                    const texture = new THREE.CanvasTexture(canvas);
-
-                    // 生成精灵材质
-                    const material = new THREE.SpriteMaterial({
-                        map: texture,
-                        transparent: true,
-                        depthTest: false // 确保文字始终显示在前面（可选）
-                    });
-
-                    // 生成精灵对象
-                    const sprite = new THREE.Sprite(material);
-                    // 调整缩放比例，根据场景单位调整
-                    sprite.scale.set(1, 1, 1);
-                    return sprite;
-                }
-
-                /**
-                 * 配置相机初始位置
-                 */
-                setupCamera() {
-                    const container = document.getElementById("viewer-container");
-                    // 创建透视相机：视角 45度，宽高比，近裁剪面 0.1，远裁剪面 1000
-                    this.camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-                    this.camera.up.set(0, 0, 1);
-
-                    // 设置相机位置（相对原点的偏移）
-                    this.camera.position.copy(this.defaultCameraPosition);
-                    // 让相机看向默认视图中心
-                    this.camera.lookAt(this.defaultViewCenter);
-                }
-
-                /**
-                 * 配置 WebGL 渲染器
-                 */
-                setupRenderer() {
-                    const container = document.getElementById("viewer-container");
-                    this.renderer = new THREE.WebGLRenderer({
-                        antialias: true, // 开启抗锯齿
-                        alpha: true // 允许背景透明
-                    });
-                    this.renderer.setSize(container.clientWidth, container.clientHeight);
-                    this.renderer.setPixelRatio(window.devicePixelRatio); // 适配高分屏
-                    this.renderer.shadowMap.enabled = true; // 开启阴影渲染
-                    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; // 使用柔和阴影
-                    this.renderer.outputColorSpace = THREE.SRGBColorSpace; // 设置色彩空间
-
-                    container.appendChild(this.renderer.domElement);
-                }
-
-                /**
-                 * 配置控制器（决定相机盯着哪里看，以及缩放限制）
-                 */
-                setupControls() {
-                    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-
-                    // --- 用户指定精确目标点 ---
-                    this.controls.target.copy(this.defaultViewCenter);
-
-                    this.controls.enableDamping = true;
-                    this.controls.dampingFactor = 0.05;
-                    this.controls.enableZoom = true;
-                    this.controls.enablePan = true;
-
-                    this.controls.maxDistance = 150;
-                    this.controls.minDistance = 5;
-
-                    this.controls.rotateSpeed = 1.0;
-                    this.controls.zoomSpeed = 1.2;
-                    this.controls.panSpeed = 1.0;
-                    this.controls.screenSpacePanning = false;
-
-                    // 监听控制器变化
-                    this.controls.addEventListener("change", () => {
-                        this.updateCameraDebugInfo();
-                        // 标记用户已经操作过，不再强制锁定初始视角
-                        this.userInteracted = true;
-                    });
-
-                    this.controls.update();
-
-                    // 初始化标志位
-                    this.userInteracted = false;
-                }
-
-                /**
-                 * 配置场景灯光
-                 */
-                setupLights() {
-                    // 半球光：模拟环境光，从天空到地面的渐变
-                    // 提高强度从 0.6 到 1.0
-                    const ambientLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0);
-                    this.scene.add(ambientLight);
-
-                    // 主方向光：模拟太阳光，产生阴影
-                    // 提高强度从 0.8 到 1.5
-                    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
-                    directionalLight.position.set(10, 20, 10);
-                    directionalLight.castShadow = true;
-
-                    // 配置阴影质量
-                    directionalLight.shadow.mapSize.width = 2048;
-                    directionalLight.shadow.mapSize.height = 2048;
-                    directionalLight.shadow.camera.near = 0.5;
-                    directionalLight.shadow.camera.far = 500;
-
-                    this.scene.add(directionalLight);
-
-                    // 补光：从反方向照射，减少阴影处的死黑
-                    const fillLight = new THREE.DirectionalLight(0xffffff, 0.8);
-                    fillLight.position.set(-10, 10, -10);
-                    this.scene.add(fillLight);
-
-                    // 顶光：增加金属质感
-                    const topLight = new THREE.PointLight(0xffffff, 1.0);
-                    topLight.position.set(0, 50, 0);
-                    this.scene.add(topLight);
-                }
-
-                /**
-                 * 绑定 UI 事件
-                 */
-                setupEventListeners() {
-                    // 窗口大小调整：自动适配渲染器和相机
-                    window.addEventListener("resize", () => this.onWindowResize());
-
-                    // 监听相机变化并更新调试信息
-                    this.controls.addEventListener("change", () => this.updateCameraDebugInfo());
-                    // 初始化显示一次
-                    this.updateCameraDebugInfo();
-                }
-
-                /**
-                 * 更新相机调试信息面板
-                 * 将当前相机的位置、目标点、旋转参数显示在 UI 上，方便开发者复制配置
-                 */
-                updateCameraDebugInfo() {
-                    const pos = this.camera.position;
-                    const target = this.controls.target;
-                    const quat = this.camera.quaternion;
-
-                    // 在控制台输出可以直接复制的代码片段
-                    console.log(`相机配置代码:
-this.camera.position.set(${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)});
-this.controls.target.set(${target.x.toFixed(2)}, ${target.y.toFixed(2)}, ${target.z.toFixed(2)});
-this.camera.quaternion.set(${quat.x.toFixed(3)}, ${quat.y.toFixed(3)}, ${quat.z.toFixed(3)}, ${quat.w.toFixed(3)});`);
-                }
-
-                /**
-                 * 加载机器人 URDF 模型
-                 */
-                async loadRobot() {
-                    try {
-                        const loader = new URDFLoader();
-
-                        // 设置包路径映射，URDF 中的 package://robot/ 会被映射到当前目录
-                        loader.packages = {
-                            robot: "./"
-                        };
-
-                        this.showLoading(true);
-
-                        // 异步加载 URDF 文件 (添加时间戳防止缓存)
-                        const robot = await new Promise((resolve, reject) => {
-                            loader.load(`./tiangong.urdf?t=${Date.now()}`, resolve, undefined, reject);
-                        });
-
-                        this.robot = robot;
-
-                        // --- 设置机器人偏移 ---
-                        // 你可以在这里调整机器人的位置 (x, y, z) 和旋转 (x, y, z)
-                        robot.position.set(14, 0, 0); // 例如: robot.position.set(0, 1, 0) 将其抬高 1 单位
-                        // robot.rotation.set(0, 0, 0); // 例如: robot.rotation.x = -Math.PI / 2;
-                        robot.rotation.z = -Math.PI / 2;
-                        this.coordinateFrame.add(robot);
-
-                        // 更新世界矩阵以计算正确的边界框
-                        robot.updateMatrixWorld(true);
-
-                        // 遍历模型的所有子对象，设置阴影并检查 Mesh 有效性
-                        let meshCount = 0;
-                        let missingMeshCount = 0;
-                        robot.traverse((child) => {
-                            if (child.isMesh) {
-                                meshCount++;
-                                child.castShadow = true;
-                                child.receiveShadow = true;
-                                // 检查 mesh 是否有有效的 geometry
-                                if (!child.geometry || child.geometry.attributes.position === undefined) {
-                                    missingMeshCount++;
-                                    console.warn("缺失或无效的 mesh:", child.name, child);
-                                }
-                            }
-                        });
-
-                        // 如果发现缺失 Mesh，在 UI 上显示警告
-                        if (missingMeshCount > 0) {
-                            console.warn(`警告: 发现 ${missingMeshCount} 个缺失或无效的 mesh 文件`);
-                            this.showError(`警告: 发现 ${missingMeshCount} 个缺失或无效的 mesh 文件，请检查 URDF 中的 mesh 路径`);
-                        }
-
-                        // 初始化关节控制界面
-                        this.setupJointInterface();
-                        this.setupBaseReferenceLines(); // 修改：设置 base_link 参考线
-                        this.isLoaded = true;
-                        this.showLoading(false);
-                        this.setLinkOverlay("Link1", "步兵1号", { 运行: "在线", 模式: "单机" }, new THREE.Vector3(0, 0, 3.8));
-                        this.setLinkOverlay("Link2", "步兵2号", { 运行: "在线", 模式: "单机" }, new THREE.Vector3(0, 0, 1.5));
-                    } catch (error) {
-                        console.error("加载机器人失败:", error);
-                        this.showError("加载机器人模型失败: " + error.message);
-                        this.showLoading(false);
-                    }
-                }
-
-                /**
-                 * 根据 URDF 模型动态生成关节控制 UI
-                 */
-                setupJointInterface() {
-                    const container = document.getElementById("joints-container");
-                    container.innerHTML = ""; // 清空容器
-
-                    // 提取所有非固定关节 (revolute, continuous, prismatic)
-                    const joints = Object.values(this.robot.joints).filter((j) => j.jointType !== "fixed");
-
-                    // 按关节名称排序，方便查找
-                    joints.sort((a, b) => a.name.localeCompare(b.name));
-
-                    // 创建一个分组容器
-                    const group = document.createElement("div");
-                    group.className = "joint-group";
-                    group.innerHTML = "<h3>关节控制</h3>";
-
-                    joints.forEach((joint) => {
-                        this.joints[joint.name] = joint;
-
-                        // 创建单个关节的控制项
-                        const control = document.createElement("div");
-                        control.className = "joint-control";
-
-                        // 获取关节限制范围 (弧度)
-                        const min = joint.limit.lower;
-                        const max = joint.limit.upper;
-                        const step = 0.01;
-
-                        control.innerHTML = `
-                            <h4>${joint.name}</h4>
-                            <div class="slider-container">
-                                <input type="range" class="slider" 
-                                    min="${min}" max="${max}" step="${step}" 
-                                    value="${joint.jointValue[0] || 0}">
-                                <div class="value-display">0.00</div>
-                            </div>
-                        `;
-
-                        const slider = control.querySelector(".slider");
-                        const display = control.querySelector(".value-display");
-
-                        // 监听滑块变化，实时更新机器人关节角度
-                        slider.addEventListener("input", (e) => {
-                            const val = parseFloat(e.target.value);
-                            this.setJointValue(joint.name, val);
-                            display.textContent = val.toFixed(2);
-                        });
-
-                        // 初始化显示数值
-                        display.textContent = (joint.jointValue[0] || 0).toFixed(2);
-
-                        this.jointControls[joint.name] = { slider, display };
-                        group.appendChild(control);
-                    });
-
-                    container.appendChild(group);
-                }
-
-                setupBaseReferenceLines() {
-                    // 获取 base_link 对象
-                    const baseLink = this.robot.links["base_link"];
-                    if (!baseLink) return;
-
-                    // 创建参考线容器
-                    const refGroup = new THREE.Group();
-                    refGroup.name = "Base_Reference_Lines";
-                    baseLink.add(refGroup);
-
-                    const maxLength = 28;
-                    const step = 0.5;
-                    let tickSize = 0.2;
-
-                    // 1. 绘制主轴线 (X方向)
-                    const lineGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-1.5, 0, 0), new THREE.Vector3(-1.5, -maxLength, 0)]);
-                    const lineMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 2 });
-                    const mainLine = new THREE.Line(lineGeometry, lineMaterial);
-                    refGroup.add(mainLine);
-
-                    // 2. 绘制刻度和数字
-                    for (let d = 0; d <= maxLength; d += step) {
-                        // 刻度线
-                        console.log(d * 10);
-                        if ((d * 10) % 2 == 0) {
-                            tickSize = 0.5;
-                        } else {
-                            tickSize = 0.2;
-                        }
-                        console.log(tickSize);
-                        const tickGeom = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-1.5, -d, 0), new THREE.Vector3(-tickSize - 1.5, -d, 0)]);
-                        const tick = new THREE.Line(tickGeom, lineMaterial);
-                        refGroup.add(tick);
-
-                        // 数字标签
-                        const label = this.createTextLabel((d * 10) % 2 == 0 ? d : d.toFixed(1), "#ffffff");
-                        label.position.set(-2.5, -d, 0);
-                        if ((d * 10) % 2 == 0) {
-                            label.scale.set(0.3, 0.3, 0.3);
-                        } else {
-                            label.scale.set(0.2, 0.2, 0.2);
-                        }
-
-                        refGroup.add(label);
-                    }
-                }
-
-                /**
-                 * 设置特定关节的数值
-                 * @param {string} name 关节名称
-                 * @param {number} value 目标数值 (弧度或米)
-                 */
-                setJointValue(name, value) {
-                    if (this.joints[name]) {
-                        this.joints[name].setJointValue(value);
-                    }
-                }
-
-                /**
-                 * 配置或添加一个状态面板
-                 * @param {string} linkName URDF中的Link名称
-                 * @param {Object} data 自定义数据对象
-                 * @param {THREE.Vector3} offset 相对于Link中心的世界偏移
-                 */
-                setLinkOverlay(linkName, robotName, data = {}, offset = new THREE.Vector3(0, 0, 2)) {
-                    if (!this.robot) return;
-
-                    // 获取目标 Link 对象
-                    const target = this.robot.links[linkName] || this.robot.getObjectByName(linkName);
-                    if (!target) {
-                        console.warn(`未找到 Link: ${linkName}`);
-                        return;
-                    }
-
-                    // 如果该 Link 的面板不存在，则创建
-                    if (!this.overlays.has(robotName)) {
-                        const el = document.createElement("div");
-                        el.className = "link-status-overlay";
-                        document.getElementById("viewer-container").appendChild(el);
-
-                        this.overlays.set(robotName, {
-                            el,
-                            target,
-                            offset,
-                            data,
-                            lastUpdate: 0
-                        });
-                    } else {
-                        // 如果已存在，则更新数据
-                        const entry = this.overlays.get(robotName);
-                        entry.data = { ...entry.data, ...data };
-                    }
-                }
-                updateAllOverlays() {
-                    if (!this.camera || this.overlays.size === 0) return;
-
-                    const container = document.getElementById("viewer-container");
-                    const rect = container.getBoundingClientRect();
-                    const now = performance.now();
-
-                    this.overlays.forEach((info, linkName) => {
-                        const { el, target, offset, data, lastUpdate } = info;
-
-                        // 1. 每 200ms 更新一次文字内容，避免性能损耗
-                        if (now - info.lastUpdate > 1000) {
-                            this.renderOverlayHTML(el, linkName, data);
-                            info.lastUpdate = now;
-                        }
-
-                        // 2. 计算空间坐标
-                        const worldPos = new THREE.Vector3();
-                        target.getWorldPosition(worldPos);
-                        worldPos.add(offset);
-
-                        // 将世界坐标投影到屏幕空间
-                        const ndc = worldPos.clone().project(this.camera);
-
-                        // 剔除相机背后的点
-                        if (ndc.z < -1 || ndc.z > 1) {
-                            el.style.display = "none";
-                            return;
-                        }
-
-                        // 转换像素坐标
-                        const x = (ndc.x * 0.5 + 0.5) * rect.width;
-                        const y = (-ndc.y * 0.5 + 0.5) * rect.height;
-
-                        el.style.display = "block";
-                        el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -110%)`;
-                    });
-                }
-
-                /**
-                 * 内部方法：渲染 HTML 模板
-                 */
-                renderOverlayHTML(el, title, data) {
-                    const timeStr = new Date().toLocaleTimeString("zh-CN", { hour12: false });
-
-                    // 动态生成行
-                    const rows = Object.entries(data)
-                        .map(
-                            ([key, val]) => `
-                        <div class="link-status-row">
-                            <span class="link-status-key">${key}</span>
-                            <span class="link-status-val">${val}</span>
-                        </div>
-                    `
-                        )
-                        .join("");
-
-                    el.innerHTML = `
-                        <div class="link-status-title">${title} 状态</div>
-                        ${rows}
-                        <div class="link-status-row"><span class="link-status-key">刷新</span><span class="link-status-val">${timeStr}</span></div>
-                    `;
-                }
-
-                /**
-                 * 渲染循环
-                 */
-                animate() {
-                    requestAnimationFrame(() => this.animate());
-                    if (this.renderer && this.scene && this.camera) {
-                        this.renderer.render(this.scene, this.camera);
-                    }
-                    this.updateAllOverlays(); // 使用新方法
-                }
-
-                /**
-                 * 计算并更新 FPS (每秒帧数)
-                 */
-                updateFPS() {
-                    this.frameCount++;
-                    const time = performance.now();
-                    if (time >= this.lastTime + 1000) {
-                        this.fps = Math.round((this.frameCount * 1000) / (time - this.lastTime));
-                        this.frameCount = 0;
-                        this.lastTime = time;
-                    }
-                }
-
-                /**
-                 * 窗口大小调整回调
-                 */
-                onWindowResize() {
-                    const container = document.getElementById("viewer-container");
-                    if (!container) return;
-
-                    const width = container.clientWidth;
-                    const height = container.clientHeight;
-
-                    // 更新相机宽高比
-                    this.camera.aspect = width / height;
-                    this.camera.updateProjectionMatrix();
-
-                    // 更新渲染器尺寸
-                    this.renderer.setSize(width, height);
-                }
-
-                /**
-                 * 显示/隐藏加载提示
-                 */
-                showLoading(show) {
-                    const el = document.getElementById("loading");
-                    if (el) el.style.display = show ? "block" : "none";
-                }
-
-                /**
-                 * 显示错误信息
-                 */
-                showError(msg) {
-                    const el = document.getElementById("error");
-                    if (el) {
-                        el.textContent = msg;
-                        el.style.display = "block";
-                        // 5秒后自动隐藏
-                        setTimeout(() => {
-                            el.style.display = "none";
-                        }, 5000);
-                    }
-                }
-            }
-
-            // 页面加载完成后启动仿真器
+            import { TiangongSimulator } from "./assets/js/simulator.js";
+            import { MonitorManager } from "./assets/js/monitor.js";
+            import { SocketManager } from "./assets/js/socket.js";
+
+            // 页面加载完成后启动应用
             window.addEventListener("DOMContentLoaded", () => {
+                // 1. 初始化 3D 仿真器
                 window.simulator = new TiangongSimulator();
+
+                // 2. 初始化视频监控
+                const monitorManager = new MonitorManager("monitor-container");
+                monitorManager.init();
+
+                // 3. 初始化 MQTT Socket
+                const mqttConfig = {
+                    hostname: "mqtt.cgboiler.com",
+                    port: 443,
+                    topic: "cgRobot_tg_msb",
+                    userName: "cgIOT",
+                    password: "!Znhzx2024",
+                    useSSL: true
+                };
+
+                window.socketManager = new SocketManager(mqttConfig, (data, topic) => {
+                    console.log(`收到来自主题 [${topic}] 的消息:`, data);
+
+                    // 这里可以根据收到的数据更新机器人状态
+                    // 例如：if (data.robotKey) window.setRobotData(data.robotKey, data.patch);
+                });
+
+                // 4. 暴露全局接口方便外部调用
+                window.tgGetState = () => window.simulator.state;
+
+                window.setRobotData = (robotKey, patch) => {
+                    const r = window.simulator.state.robots[robotKey];
+                    if (!r) return;
+                    Object.assign(r, patch || {});
+                    window.simulator.applyState();
+                };
+
+                window.setRobotJoints = (robotKey, jointsPatch) => {
+                    const r = window.simulator.state.robots[robotKey];
+                    if (!r || !jointsPatch) return;
+                    Object.entries(jointsPatch).forEach(([name, val]) => {
+                        r.joints[name] = val;
+                    });
+                    window.simulator.applyState();
+                };
+
+                window.setJointValue = (jointName, value) => {
+                    if (typeof jointName !== "string") return;
+                    if (jointName.startsWith("joint1")) {
+                        window.simulator.state.robots.Link1.joints[jointName] = value;
+                    } else if (jointName.startsWith("joint2")) {
+                        window.simulator.state.robots.Link2.joints[jointName] = value;
+                    }
+                    window.simulator.applyState();
+                };
+
+                window.setWelding = (robotKey, isWelding) => {
+                    const r = window.simulator.state.robots[robotKey];
+                    if (!r) return;
+                    r.welding = !!isWelding;
+                    window.simulator.applyState();
+                };
             });
         </script>
     </body>
