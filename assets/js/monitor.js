@@ -1,11 +1,7 @@
 export class MonitorManager {
     constructor(containerId) {
         this.container = document.getElementById(containerId);
-        this.monitors = [
-            { id: 1, title: "现场监控1", url: "https://pv-monitor.cgboiler.com/?y1=rtsp://admin:center123@10.13.75.77/cam/realmonitor?channel=1&subtype=1" },
-            { id: 2, title: "现场监控2", url: "" },
-            { id: 3, title: "现场监控3", url: "" }
-        ];
+        this.monitors = [{ id: 1, title: "现场监控", url: "https://pv-monitor.cgboiler.com/?y1=rtsp://admin:center123@10.13.75.77/cam/realmonitor?channel=1&subtype=1" }];
     }
 
     init() {
