@@ -306,7 +306,7 @@ body {
     left: 0;
     z-index: 999;
     display: none;
-    pointer-events: none;
+    pointer-events: auto;
     background: rgba(0, 0, 0, 0.75);
     border: 1px solid rgba(79, 195, 247, 0.55);
     border-radius: 10px;
@@ -342,6 +342,30 @@ body {
 .link-status-val {
     color: rgba(255, 255, 255, 0.95);
     font-family: "Courier New", monospace;
+}
+
+.link-status-monitor {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    overflow: hidden; /* 确保裁剪生效 */
+}
+
+.monitor-label {
+    font-size: 0.8em;
+    color: #4fc3f7;
+    margin-bottom: 6px;
+    font-weight: bold;
+}
+
+.monitor-mini-iframe {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    border: 1px solid rgba(79, 195, 247, 0.3);
+    border-radius: 4px;
+    background: #000;
+    pointer-events: none; /* 禁止鼠标交互，防止触发视频播放器的控制条显示 */
+    object-fit: cover;
 }
 
 /* 现场监控浮层样式 */

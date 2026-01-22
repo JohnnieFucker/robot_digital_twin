@@ -25,8 +25,8 @@ export class TiangongSimulator {
         this.robotJointGroups = { Link1: [], Link2: [] };
         this.state = {
             robots: {
-                Link1: { name: "步兵1号", running: "在线", mode: "单机", welding: true, joints: {} },
-                Link2: { name: "步兵2号", running: "在线", mode: "单机", welding: true, joints: {} }
+                Link1: { name: "步兵1号", running: "在线", mode: "单机", welding: true, joints: {}, weldpoolUrl: "http://10.13.40.52:8889/weldpool/?autoplay=1&controls=0" },
+                Link2: { name: "步兵2号", running: "在线", mode: "单机", welding: true, joints: {}, weldpoolUrl: "" }
             }
         };
 
@@ -249,10 +249,16 @@ this.camera.quaternion.set(${quat.x.toFixed(3)}, ${quat.y.toFixed(3)}, ${quat.z.
             this.setupBaseReferenceLines();
             this.isLoaded = true;
             this.showLoading(false);
-            this.setLinkOverlay("Link1", "步兵1号", { 运行: "在线", 模式: "单机" }, new THREE.Vector3(0, 0, 3.8));
-            this.setLinkOverlay("Link2", "步兵2号", { 运行: "在线", 模式: "单机" }, new THREE.Vector3(0, 0, 1.5));
+            const s1 = this.state.robots.Link1;
+            const s2 = this.state.robots.Link2;
+            this.setLinkOverlay("Link1", "步兵1号", { weldpoolUrl: s1.weldpoolUrl }, new THREE.Vector3(0, 0, 3.8));
+            this.setLinkOverlay("Link2", "步兵2号", { weldpoolUrl: s2.weldpoolUrl }, new THREE.Vector3(0, 0, 1.5));
             this.addWeldingIndicator("Link1-6", new THREE.Vector3(-0.45, 0.05, 0), 0.04, 800);
             this.addWeldingIndicator("Link2-6", new THREE.Vector3(-0.45, 0.05, 0), 0.04, 800);
+
+            // 初始应用一遍状态，确保 Overlay 获取到所有数据
+            this.applyState();
+
             this.setWeldingState("Link1-6", true);
             this.setWeldingState("Link2-6", true);
         } catch (error) {
@@ -372,7 +378,11 @@ this.camera.quaternion.set(${quat.x.toFixed(3)}, ${quat.y.toFixed(3)}, ${quat.z.
             document.getElementById("viewer-container").appendChild(el);
 
             this.overlays.set(robotName, {
-                el, target, offset, data, lastUpdate: 0
+                el,
+                target,
+                offset,
+                data,
+                lastUpdate: 0
             });
         } else {
             const entry = this.overlays.get(robotName);
@@ -383,7 +393,7 @@ this.camera.quaternion.set(${quat.x.toFixed(3)}, ${quat.y.toFixed(3)}, ${quat.z.
     applyState() {
         const s1 = this.state.robots.Link1;
         const s2 = this.state.robots.Link2;
-        
+
         const updateRobot = (robotState) => {
             Object.entries(robotState.joints).forEach(([name, val]) => {
                 if (this.joints[name]) {
@@ -406,7 +416,8 @@ this.camera.quaternion.set(${quat.x.toFixed(3)}, ${quat.y.toFixed(3)}, ${quat.z.
         const updateOverlay = (robotName, robotState) => {
             const ov = this.overlays.get(robotName);
             if (ov) {
-                ov.data = { 运行: robotState.running, 模式: robotState.mode, 焊接: robotState.welding ? "焊接中" : "等待中" };
+                const newData = { 运行: robotState.running, 模式: robotState.mode, 焊接: robotState.welding ? "焊接中" : "等待中", weldpoolUrl: robotState.weldpoolUrl };
+                ov.data = { ...ov.data, ...newData };
             }
         };
 
@@ -467,22 +478,61 @@ this.camera.quaternion.set(${quat.x.toFixed(3)}, ${quat.y.toFixed(3)}, ${quat.z.
     updateWeldingIndicators(now) {
         this.weldingIndicators.forEach((ind) => {
             if (ind.mesh) {
-                ind.mesh.visible = ind.isWelding ? (Math.floor(now / ind.blinkMs) % 2 === 0) : false;
+                ind.mesh.visible = ind.isWelding ? Math.floor(now / ind.blinkMs) % 2 === 0 : false;
             }
         });
     }
 
     renderOverlayHTML(el, title, data) {
         const timeStr = new Date().toLocaleTimeString("zh-CN", { hour12: false });
-        const rows = Object.entries(data)
+        const { weldpoolUrl, ...otherData } = data;
+
+        // 构造属性行 HTML
+        const rowsHtml = Object.entries(otherData)
             .map(([key, val]) => `<div class="link-status-row"><span class="link-status-key">${key}</span><span class="link-status-val">${val}</span></div>`)
             .join("");
 
-        el.innerHTML = `
-            <div class="link-status-title">${title}</div>
-            ${rows}
-            <div class="link-status-row"><span class="link-status-key">刷新</span><span class="link-status-val">${timeStr}</span></div>
-        `;
+        // 如果是第一次渲染或结构不匹配，初始化基础结构
+        if (!el.querySelector(".link-status-content")) {
+            el.innerHTML = `
+                <div class="link-status-title">${title}</div>
+                <div class="link-status-content">${rowsHtml}</div>
+                <div class="link-status-footer">
+                    <div class="link-status-row">
+                        <span class="link-status-key">刷新</span>
+                        <span class="link-status-val refresh-time">${timeStr}</span>
+                    </div>
+                </div>
+                <div class="link-status-monitor-container"></div>
+            `;
+        } else {
+            // 更新属性行（仅内容变化时）
+            const contentEl = el.querySelector(".link-status-content");
+            if (contentEl.innerHTML !== rowsHtml) {
+                contentEl.innerHTML = rowsHtml;
+            }
+            // 更新时间
+            const timeEl = el.querySelector(".refresh-time");
+            if (timeEl) timeEl.textContent = timeStr;
+        }
+
+        // 更新监控画面 (仅在 URL 变化时操作，避免 iframe 重载)
+        const monitorContainer = el.querySelector(".link-status-monitor-container");
+        if (weldpoolUrl) {
+            let iframe = monitorContainer.querySelector(".monitor-mini-iframe");
+            if (!iframe) {
+                monitorContainer.innerHTML = `
+                    <div class="link-status-monitor">
+                        <div class="monitor-label">实时熔池</div>
+                        <iframe src="${weldpoolUrl}" class="monitor-mini-iframe"></iframe>
+                    </div>
+                `;
+            } else if (iframe.getAttribute("src") !== weldpoolUrl) {
+                iframe.src = weldpoolUrl;
+            }
+        } else {
+            monitorContainer.innerHTML = "";
+        }
     }
 
     animate() {
@@ -516,7 +566,9 @@ this.camera.quaternion.set(${quat.x.toFixed(3)}, ${quat.y.toFixed(3)}, ${quat.z.
         if (el) {
             el.textContent = msg;
             el.style.display = "block";
-            setTimeout(() => { el.style.display = "none"; }, 5000);
+            setTimeout(() => {
+                el.style.display = "none";
+            }, 5000);
         }
     }
 }
