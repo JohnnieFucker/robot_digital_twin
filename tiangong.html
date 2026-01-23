@@ -87,10 +87,13 @@
 
                     // 判断当前状态
                     let status = "等待";
+                    let isWelding = false;
+
                     if (data.emergencyStatus === 1) {
                         status = "急停";
                     } else if (data.movStatus === 1) {
                         status = "运行中";
+                        isWelding = true;
                     }
 
                     console.log(`${robotId} 状态: ${status}`);
@@ -102,20 +105,19 @@
 
                         for (let i = 0; i < 6; i++) {
                             const jointName = `${prefix}-${i + 1}`;
-                            // 将角度转换为弧度（Three.js使用弧度）
                             jointUpdates[jointName] = (data.jnts[i] * Math.PI) / 180;
                         }
 
-                        // 使用全局函数更新关节角度
                         if (window.setRobotJoints) {
                             window.setRobotJoints(robotKey, jointUpdates);
                         }
                     }
 
-                    // 可选：更新机器人其他状态信息
+                    // 更新机器人其他状态信息
                     if (window.setRobotData) {
                         window.setRobotData(robotKey, {
                             status: status,
+                            welding: isWelding,
                             tcpSpeed: data.tcpSpeed || 0,
                             motionPercent: data.motionExecutionPercent || 0
                         });

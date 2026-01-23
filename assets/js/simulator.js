@@ -416,7 +416,14 @@ export class TiangongSimulator {
         const updateOverlay = (robotName, robotState) => {
             const ov = this.overlays.get(robotName);
             if (ov) {
-                const newData = { 运行: robotState.running, 模式: robotState.mode, 焊接: robotState.welding ? "焊接中" : "等待中", weldpoolUrl: robotState.weldpoolUrl };
+                // 优先使用传入的 status 字段，如果没有则回退到 running
+                const statusDisplay = robotState.status || robotState.running || "离线";
+                const newData = {
+                    运行: statusDisplay,
+                    模式: robotState.mode || "未知",
+                    焊接: robotState.welding ? "焊接中" : "等待中",
+                    weldpoolUrl: robotState.weldpoolUrl
+                };
                 ov.data = { ...ov.data, ...newData };
             }
         };
