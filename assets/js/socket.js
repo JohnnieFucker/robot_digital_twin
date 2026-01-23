@@ -17,7 +17,6 @@ export class SocketManager {
         this.onMessage = onMessage;
         this.client = null;
         this.reconnectAttempts = 0;
-        this.maxReconnectAttempts = 10;
         this.reconnectInterval = 5000;
 
         this.init();
@@ -26,7 +25,9 @@ export class SocketManager {
     init() {
         try {
             // 初始化 Paho MQTT 客户端
-            this.client = new Paho.MQTT.Client(this.config.hostname, this.config.port, this.config.path, this.config.clientId);
+            // 使用更长的随机 ID 以防冲突
+            const clientId = this.config.clientId + "_" + Math.random().toString(16).slice(2, 8);
+            this.client = new Paho.MQTT.Client(this.config.hostname, Number(this.config.port), this.config.path, clientId);
 
             // 设置回调
             this.client.onConnectionLost = this.onConnectionLost.bind(this);
@@ -43,19 +44,26 @@ export class SocketManager {
             onSuccess: this.onConnect.bind(this),
             onFailure: this.onConnectFailure.bind(this),
             useSSL: this.config.useSSL,
-            timeout: 5,
+            timeout: 10,
             userName: this.config.userName,
             password: this.config.password,
-            keepAliveInterval: 30,
-            cleanSession: true
+            keepAliveInterval: 20, // 降低心跳间隔
+            cleanSession: true,
+            mqttVersion: 4, // 明确指定 MQTT 3.1.1 (Level 4)
+            reconnect: true // 开启 Paho 内建自动重连
         };
 
         console.log(`正在连接到 MQTT 服务器: ${this.config.hostname}:${this.config.port}...`);
-        this.client.connect(connectOptions);
+        try {
+            this.client.connect(connectOptions);
+        } catch (e) {
+            console.error("MQTT 连接触发异常:", e);
+            this.handleReconnect();
+        }
     }
 
     onConnect() {
-        console.log("成功连接到 MQTT 服务器");
+        console.log("%c MQTT 成功连接 ", "background: #222; color: #bada55");
         this.reconnectAttempts = 0;
 
         // 连接成功后订阅主题
@@ -94,13 +102,17 @@ export class SocketManager {
     }
 
     handleReconnect() {
-        if (this.reconnectAttempts < this.maxReconnectAttempts) {
-            this.reconnectAttempts++;
-            console.log(`尝试重新连接 MQTT (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
-            setTimeout(() => this.connect(), this.reconnectInterval);
-        } else {
-            console.error("达到最大重连次数，停止重连");
-        }
+        this.reconnectAttempts++;
+        // 使用退避策略，随着失败次数增加延长重连时间，最大 30 秒
+        const delay = Math.min(this.reconnectInterval * Math.max(1, Math.floor(this.reconnectAttempts / 2)), 30000);
+
+        console.log(`MQTT 连接丢失，将在 ${delay / 1000} 秒后尝试重新连接...`);
+
+        setTimeout(() => {
+            if (!this.client || !this.client.isConnected()) {
+                this.connect();
+            }
+        }, delay);
     }
 
     /**
