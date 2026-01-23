@@ -213,13 +213,13 @@ export class TiangongSimulator {
     }
 
     updateCameraDebugInfo() {
-        const pos = this.camera.position;
-        const target = this.controls.target;
-        const quat = this.camera.quaternion;
-        console.log(`相机配置代码:
-this.camera.position.set(${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)});
-this.controls.target.set(${target.x.toFixed(2)}, ${target.y.toFixed(2)}, ${target.z.toFixed(2)});
-this.camera.quaternion.set(${quat.x.toFixed(3)}, ${quat.y.toFixed(3)}, ${quat.z.toFixed(3)}, ${quat.w.toFixed(3)});`);
+        //         const pos = this.camera.position;
+        //         const target = this.controls.target;
+        //         const quat = this.camera.quaternion;
+        //         console.log(`相机配置代码:
+        // this.camera.position.set(${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)});
+        // this.controls.target.set(${target.x.toFixed(2)}, ${target.y.toFixed(2)}, ${target.z.toFixed(2)});
+        // this.camera.quaternion.set(${quat.x.toFixed(3)}, ${quat.y.toFixed(3)}, ${quat.z.toFixed(3)}, ${quat.w.toFixed(3)});`);
     }
 
     async loadRobot() {
@@ -342,20 +342,20 @@ this.camera.quaternion.set(${quat.x.toFixed(3)}, ${quat.y.toFixed(3)}, ${quat.z.
         const step = 0.5;
         let tickSize = 0.2;
 
-        const lineGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-1.5, 0, 0), new THREE.Vector3(-1.5, -maxLength, 0)]);
+        const lineGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-1.2, 0, 0), new THREE.Vector3(-1.2, -maxLength, 0)]);
         const lineMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 2 });
         const mainLine = new THREE.Line(lineGeometry, lineMaterial);
         refGroup.add(mainLine);
 
         for (let d = 0; d <= maxLength; d += step) {
             const isMajor = (d * 10) % 2 === 0;
-            tickSize = isMajor ? 0.5 : 0.2;
-            const tickGeom = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-1.5, -d, 0), new THREE.Vector3(-tickSize - 1.5, -d, 0)]);
+            tickSize = isMajor ? 0.4 : 0.2;
+            const tickGeom = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-1.2, -d, 0), new THREE.Vector3(-tickSize - 1.2, -d, 0)]);
             const tick = new THREE.Line(tickGeom, lineMaterial);
             refGroup.add(tick);
 
             const label = this.createTextLabel(isMajor ? d : d.toFixed(1), "#ffffff");
-            label.position.set(-2.5, -d, 0);
+            label.position.set(-1.8, -d, 0);
             label.scale.set(isMajor ? 0.3 : 0.2, isMajor ? 0.3 : 0.2, isMajor ? 0.3 : 0.2);
             refGroup.add(label);
         }

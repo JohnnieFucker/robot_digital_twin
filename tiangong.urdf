@@ -169,8 +169,8 @@
     name="joint1-1"
     type="revolute">
     <origin
-      xyz="-0.0099737 -0.6255 0.0057037"
-      rpy="0 1.22 3.1416" />
+      xyz="0 -0.6255 0"
+      rpy="0 1.5708 3.1416" />
     <parent
       link="Link1-0" />
     <child
@@ -220,7 +220,7 @@
     type="revolute">
     <origin
       xyz="-0.038003 0.242 0.18"
-      rpy="0 0.0074575 -1.5708" />
+      rpy="0 -1.5708 -1.5708" />
     <parent
       link="Link1-1" />
     <child
@@ -270,7 +270,7 @@
     type="revolute">
     <origin
       xyz="0 -0.008 0.8"
-      rpy="0 -1.4541 0" />
+      rpy="0 0 0" />
     <parent
       link="Link1-2" />
     <child
@@ -320,7 +320,7 @@
     type="revolute">
     <origin
       xyz="0.0835 0.0433 0.225"
-      rpy="-3.0285 0 0" />
+      rpy="0 0 0" />
     <parent
       link="Link1-3" />
     <child
@@ -370,7 +370,7 @@
     type="revolute">
     <origin
       xyz="0.9265 -0.0353 0"
-      rpy="0 1.4836 0" />
+      rpy="0 0 0" />
     <parent
       link="Link1-4" />
     <child
@@ -419,8 +419,8 @@
     name="joint1-6"
     type="revolute">
     <origin
-      xyz="0.0940000046417269 0.0353002689417377 0"
-      rpy="-0.367334218169828 0 -3.14159256129931" />
+      xyz="0.094 0.0353 0"
+      rpy="-1.768 0 3.1416" />
     <parent
       link="Link1-5" />
     <child
@@ -569,8 +569,8 @@
     name="joint2-1"
     type="revolute">
     <origin
-      xyz="0 -0.6205 0.01"
-      rpy="0 1.2343 -3.1416" />
+      xyz="0 -0.6205 0"
+      rpy="0 1.5708 3.1416" />
     <parent
       link="Link2-0" />
     <child
@@ -620,7 +620,7 @@
     type="revolute">
     <origin
       xyz="-0.038003 0.242 0.18"
-      rpy="3.1416 -0.72647 1.5708" />
+      rpy="0 -1.5708 -1.5708" />
     <parent
       link="Link2-1" />
     <child
@@ -670,7 +670,7 @@
     type="revolute">
     <origin
       xyz="0 -0.008 0.8"
-      rpy="0 0.66338 0" />
+      rpy="0 0 0" />
     <parent
       link="Link2-2" />
     <child
@@ -719,8 +719,8 @@
     name="joint2-4"
     type="revolute">
     <origin
-      xyz="0.2195 0.0433 0.225"
-      rpy="0.64394 0 0" />
+      xyz="0.0835 0.0433 0.225"
+      rpy="0 0 0" />
     <parent
       link="Link2-3" />
     <child
@@ -769,8 +769,8 @@
     name="joint2-5"
     type="revolute">
     <origin
-      xyz="0.7905 -0.0655 0"
-      rpy="0 0.78509 0" />
+      xyz="0.7905 -0.0353 0"
+      rpy="0 0 0" />
     <parent
       link="Link2-4" />
     <child
@@ -819,8 +819,8 @@
     name="joint2-6"
     type="revolute">
     <origin
-      xyz="0.094 0.0655 0"
-      rpy="1.768 0 -3.1416" />
+      xyz="0.094 0.0353 0"
+      rpy="-1.768 0 3.1416" />
     <parent
       link="Link2-5" />
     <child
