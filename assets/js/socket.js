@@ -49,8 +49,7 @@ export class SocketManager {
             password: this.config.password,
             keepAliveInterval: 20, // 降低心跳间隔
             cleanSession: true,
-            mqttVersion: 4, // 明确指定 MQTT 3.1.1 (Level 4)
-            reconnect: true // 开启 Paho 内建自动重连
+            mqttVersion: 4 // 明确指定 MQTT 3.1.1 (Level 4)
         };
 
         console.log(`正在连接到 MQTT 服务器: ${this.config.hostname}:${this.config.port}...`);
