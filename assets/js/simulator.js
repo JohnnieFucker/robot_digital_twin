@@ -394,21 +394,18 @@ export class TiangongSimulator {
         const s1 = this.state.robots.Link1;
         const s2 = this.state.robots.Link2;
 
-        const updateRobot = (robotState) => {
+        const syncUI = (robotState) => {
             Object.entries(robotState.joints).forEach(([name, val]) => {
-                if (this.joints[name]) {
-                    this.joints[name].setJointValue(val);
-                    const ctrl = this.jointControls[name];
-                    if (ctrl) {
-                        ctrl.slider.value = val;
-                        ctrl.display.textContent = Number(val).toFixed(2);
-                    }
+                const ctrl = this.jointControls[name];
+                if (ctrl) {
+                    ctrl.slider.value = val;
+                    ctrl.display.textContent = Number(val).toFixed(2);
                 }
             });
         };
 
-        updateRobot(s1);
-        updateRobot(s2);
+        syncUI(s1);
+        syncUI(s2);
 
         this.setWeldingState("Link1-6", !!s1.welding);
         this.setWeldingState("Link2-6", !!s2.welding);
@@ -416,7 +413,6 @@ export class TiangongSimulator {
         const updateOverlay = (robotName, robotState) => {
             const ov = this.overlays.get(robotName);
             if (ov) {
-                // 优先使用传入的 status 字段，如果没有则回退到 running
                 const statusDisplay = robotState.status || robotState.running || "离线";
                 const newData = {
                     运行: statusDisplay,
@@ -542,8 +538,45 @@ export class TiangongSimulator {
         }
     }
 
+    /**
+     * 平滑更新关节角度
+     * 在每帧渲染前调用，实现平滑移动效果
+     */
+    updateJointsSmoothing() {
+        const smoothingFactor = 0.01; // 进一步调低，让移动时间接近 1 秒的消息周期
+        const minStep = 0.0001;
+
+        [this.state.robots.Link1, this.state.robots.Link2].forEach((robotState) => {
+            Object.entries(robotState.joints).forEach(([name, targetVal]) => {
+                const joint = this.joints[name];
+                if (joint) {
+                    const currentVal = joint.jointValue[0] || 0;
+                    const diff = targetVal - currentVal;
+
+                    if (Math.abs(diff) > minStep) {
+                        // 线性插值计算
+                        let nextVal = currentVal + diff * smoothingFactor;
+
+                        // 接近目标时直接吸附
+                        if (Math.abs(targetVal - nextVal) < minStep) {
+                            nextVal = targetVal;
+                        }
+
+                        joint.setJointValue(nextVal);
+                    }
+                }
+            });
+        });
+    }
+
     animate() {
         requestAnimationFrame(() => this.animate());
+
+        // 只有在模型加载完成后才进行平滑计算
+        if (this.isLoaded) {
+            this.updateJointsSmoothing();
+        }
+
         if (this.renderer && this.scene && this.camera) {
             this.renderer.render(this.scene, this.camera);
             this.controls.update();
