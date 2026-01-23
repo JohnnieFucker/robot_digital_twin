@@ -60,11 +60,66 @@
                     useSSL: true
                 };
 
-                window.socketManager = new SocketManager(mqttConfig, (data, topic) => {
-                    console.log(`收到来自主题 [${topic}] 的消息:`, data);
+                // 全局变量：记录每个机器人最后一次接收的时间戳
+                const lastRobotTime = {
+                    tgRobot_1: 0,
+                    tgRobot_2: 0
+                };
 
-                    // 这里可以根据收到的数据更新机器人状态
-                    // 例如：if (data.robotKey) window.setRobotData(data.robotKey, data.patch);
+                window.socketManager = new SocketManager(mqttConfig, (data, topic) => {
+                    // 根据收到的数据更新机器人状态
+                    if (!data || !data.robotId) return;
+
+                    const robotId = data.robotId;
+                    const currentTime = data.time || 0;
+
+                    // 消息去重：如果收到的消息时间戳小于等于上次记录的时间戳，丢弃消息
+                    if (currentTime <= lastRobotTime[robotId]) {
+                        console.log(`丢弃旧消息: ${robotId}, time: ${currentTime}`);
+                        return;
+                    }
+
+                    // 更新时间戳
+                    lastRobotTime[robotId] = currentTime;
+
+                    // 根据robotId判断是1号还是2号机器人
+                    const robotKey = robotId === "tgRobot_1" ? "Link1" : "Link2";
+
+                    // 判断当前状态
+                    let status = "等待";
+                    if (data.emergencyStatus === 1) {
+                        status = "急停";
+                    } else if (data.movStatus === 1) {
+                        status = "运行中";
+                    }
+
+                    console.log(`${robotId} 状态: ${status}`);
+
+                    // 更新机器人关节角度
+                    if (data.jnts && Array.isArray(data.jnts) && data.jnts.length >= 6) {
+                        const jointUpdates = {};
+                        const prefix = robotId === "tgRobot_1" ? "joint1" : "joint2";
+
+                        for (let i = 0; i < 6; i++) {
+                            const jointName = `${prefix}-${i + 1}`;
+                            // 将角度转换为弧度（Three.js使用弧度）
+                            jointUpdates[jointName] = (data.jnts[i] * Math.PI) / 180;
+                        }
+
+                        // 使用全局函数更新关节角度
+                        if (window.setRobotJoints) {
+                            window.setRobotJoints(robotKey, jointUpdates);
+                        }
+                    }
+
+                    // 可选：更新机器人其他状态信息
+                    if (window.setRobotData) {
+                        window.setRobotData(robotKey, {
+                            status: status,
+                            tcpSpeed: data.tcpSpeed || 0,
+                            motionPercent: data.motionExecutionPercent || 0
+                        });
+                    }
                 });
 
                 // 4. 暴露全局接口方便外部调用
