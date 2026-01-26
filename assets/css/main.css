@@ -29,12 +29,18 @@ body {
 
 /* 右侧控制面板：固定宽度，半透明毛玻璃效果 */
 #control-panel {
-    width: 380px;
+    width: 30%;
     background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(10px);
     border-left: 1px solid rgba(255, 255, 255, 0.1);
     padding: 20px;
     overflow-y: auto;
+    transition: backdrop-filter 0.3s ease;
+}
+
+/* 当监控展开时，取消父容器的 backdrop-filter，防止产生新的 Containing Block 限制 fixed 定位 */
+#container:has(.monitor-card[data-expanded="true"]) #control-panel {
+    backdrop-filter: none;
 }
 
 /* 控制面板标题样式 */
@@ -368,22 +374,44 @@ body {
     object-fit: cover;
 }
 
-/* 现场监控浮层样式 */
+/* 控制面板标题增强 */
+.panel-main-title {
+    color: #4fc3f7;
+    margin-bottom: 25px;
+    text-align: left;
+    font-size: 1.4em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-left: 4px solid #4fc3f7;
+    padding-left: 12px;
+}
+
+/* 分割线 */
+.divider {
+    height: 1px;
+    background: linear-gradient(90deg, rgba(79, 195, 247, 0.5), transparent);
+    margin: 25px 0;
+}
+
+/* 监控包装器：解决放大时原位置塌陷问题 */
+.monitor-wrapper {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    position: relative;
+    margin-bottom: 15px;
+}
+
 .monitor-overlay-container {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    right: 20px;
     display: flex;
-    justify-content: center; /* 居中显示 */
-    gap: 20px;
-    z-index: 900;
-    pointer-events: none;
+    flex-direction: column;
+    width: 100%;
+    gap: 0; /* 使用 wrapper 的 margin 代替 gap */
 }
 
 .monitor-card {
-    width: 15vw; /* 默认宽度，会被 JS 动态调整或保持比例 */
-    aspect-ratio: 16 / 9; /* 保持 16:9 比例 */
+    width: 100%;
+    height: 100%;
     background: rgba(0, 0, 0, 0.6);
     border: 1px solid rgba(79, 195, 247, 0.3);
     border-radius: 12px;
@@ -393,6 +421,93 @@ body {
     display: flex;
     flex-direction: column;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.monitor-card:hover {
+    border-color: rgba(79, 195, 247, 0.8);
+    transform: translateY(-2px);
+}
+
+/* 全屏放大样式：不移动 DOM 元素 */
+.monitor-card[data-expanded="true"] {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) !important;
+    width: 90vw;
+    height: 80vh;
+    z-index: 9999;
+    box-shadow: 0 0 100px rgba(0, 0, 0, 0.95);
+    background: #000;
+}
+
+/* 展开时的遮罩效果：应用于 body 确保覆盖全屏 */
+body:has(.monitor-card[data-expanded="true"])::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
+    z-index: 9998;
+    pointer-events: none;
+}
+
+.monitor-click-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    cursor: pointer;
+}
+
+/* 数据指标网格 */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.stat-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 12px;
+    transition: all 0.2s;
+}
+
+.stat-card:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(79, 195, 247, 0.3);
+}
+
+.stat-label {
+    font-size: 0.75em;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 4px;
+}
+
+.stat-value {
+    font-size: 1.25em;
+    font-weight: 700;
+    color: #fff;
+    font-family: "Courier New", monospace;
+}
+
+.stat-value.warning {
+    color: #81c784; /* 绿色表示正常 */
+}
+
+.stat-unit {
+    font-size: 0.6em;
+    color: rgba(255, 255, 255, 0.4);
+    margin-left: 2px;
 }
 
 .monitor-header {
@@ -421,6 +536,19 @@ body {
     background: #4caf50;
     border-radius: 50%;
     box-shadow: 0 0 8px #4caf50;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.4;
+    }
+    100% {
+        opacity: 1;
+    }
 }
 
 .monitor-body {
@@ -443,6 +571,4 @@ body {
     justify-content: center;
     color: rgba(255, 255, 255, 0.3);
     font-size: 13px;
-    background: linear-gradient(45deg, #0a0a0a 25%, #111 25%, #111 50%, #0a0a0a 50%, #0a0a0a 75%, #111 75%, #111 100%);
-    background-size: 40px 40px;
 }

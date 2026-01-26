@@ -11,11 +11,6 @@
         <div id="container">
             <!-- 左侧 3D 渲染区域 -->
             <div id="viewer-container">
-                <!-- 现场监控浮层 -->
-                <div class="monitor-overlay-container" id="monitor-container">
-                    <!-- 动态生成监控卡片 -->
-                </div>
-
                 <!-- 加载提示 -->
                 <div id="loading">
                     <div class="loading-spinner"></div>
@@ -27,9 +22,45 @@
 
             <!-- 右侧控制面板区域 -->
             <div id="control-panel">
-                <h2>控制面板</h2>
+                <h2 class="panel-main-title">生产监控与控制</h2>
 
-                <!-- 动态生成的关节控制滑块将插入此处 -->
+                <!-- 监控区域 -->
+                <div class="monitor-overlay-container" id="monitor-container">
+                    <!-- 动态生成监控卡片 -->
+                </div>
+
+                <!-- 数据指标区域 -->
+                <div id="stats-container" class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">今日产量</div>
+                        <div class="stat-value">
+                            1,248
+                            <span class="stat-unit">m</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">运行效率</div>
+                        <div class="stat-value">
+                            94.2
+                            <span class="stat-unit">%</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">故障预警</div>
+                        <div class="stat-value warning">无</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">任务进度</div>
+                        <div class="stat-value">
+                            68
+                            <span class="stat-unit">%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <!-- 关节控制 -->
                 <div id="joints-container">
                     <!-- 动态生成的关节控制界面 -->
                 </div>
