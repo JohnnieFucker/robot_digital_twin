@@ -25,8 +25,8 @@ export class TiangongSimulator {
         this.robotJointGroups = { Link1: [], Link2: [] };
         this.state = {
             robots: {
-                Link1: { name: "步兵1号", running: "在线", mode: "单机", welding: true, joints: {}, weldpoolUrl: "http://10.13.120.108:8889/weldpool/?autoplay=1&controls=0" },
-                Link2: { name: "步兵2号", running: "在线", mode: "单机", welding: true, joints: {}, weldpoolUrl: "" }
+                Link1: { name: "步兵1号", running: "连接中", mode: "单机", welding: null, joints: {}, weldpoolUrl: "http://10.13.120.108:8889/weldpool/?autoplay=1&controls=0", lasertrackUrl: "http://10.13.120.108:8889/lasertrack/?autoplay=1&controls=0" },
+                Link2: { name: "步兵2号", running: "连接中", mode: "单机", welding: null, joints: {}, weldpoolUrl: "", lasertrackUrl: "" }
             }
         };
 
@@ -251,16 +251,16 @@ export class TiangongSimulator {
             this.showLoading(false);
             const s1 = this.state.robots.Link1;
             const s2 = this.state.robots.Link2;
-            this.setLinkOverlay("Link1", "步兵1号", { weldpoolUrl: s1.weldpoolUrl }, new THREE.Vector3(0, 0, 3.8));
-            this.setLinkOverlay("Link2", "步兵2号", { weldpoolUrl: s2.weldpoolUrl }, new THREE.Vector3(0, 0, 1.5));
+            this.setLinkOverlay("Link1", "步兵1号", { weldpoolUrl: s1.weldpoolUrl, lasertrackUrl: s1.lasertrackUrl }, new THREE.Vector3(0, 0, 3.8));
+            this.setLinkOverlay("Link2", "步兵2号", { weldpoolUrl: s2.weldpoolUrl, lasertrackUrl: s2.lasertrackUrl }, new THREE.Vector3(0, 0, 1.5));
             this.addWeldingIndicator("Link1-6", new THREE.Vector3(-0.45, 0.05, 0), 0.04, 800);
             this.addWeldingIndicator("Link2-6", new THREE.Vector3(-0.45, 0.05, 0), 0.04, 800);
 
             // 初始应用一遍状态，确保 Overlay 获取到所有数据
             this.applyState();
 
-            this.setWeldingState("Link1-6", true);
-            this.setWeldingState("Link2-6", true);
+            this.setWeldingState("Link1-6", false);
+            this.setWeldingState("Link2-6", false);
         } catch (error) {
             console.error("加载机器人失败:", error);
             this.showError("加载机器人模型失败: " + error.message);
@@ -417,8 +417,10 @@ export class TiangongSimulator {
                 const newData = {
                     运行: statusDisplay,
                     模式: robotState.mode || "未知",
-                    焊接: robotState.welding ? "焊接中" : "等待中",
-                    weldpoolUrl: robotState.weldpoolUrl
+                    焊接: robotState.welding === true ? "焊接中" : robotState.welding === false ? "等待中" : "-",
+                    welding: !!robotState.welding,
+                    weldpoolUrl: robotState.weldpoolUrl,
+                    lasertrackUrl: robotState.lasertrackUrl
                 };
                 ov.data = { ...ov.data, ...newData };
             }
@@ -488,7 +490,8 @@ export class TiangongSimulator {
 
     renderOverlayHTML(el, title, data) {
         const timeStr = new Date().toLocaleTimeString("zh-CN", { hour12: false });
-        const { weldpoolUrl, ...otherData } = data;
+        // 从 data 中分离出控制类字段，其余作为展示行
+        const { weldpoolUrl, lasertrackUrl, welding, ...otherData } = data;
 
         // 构造属性行 HTML
         const rowsHtml = Object.entries(otherData)
@@ -506,7 +509,7 @@ export class TiangongSimulator {
                         <span class="link-status-val refresh-time">${timeStr}</span>
                     </div>
                 </div>
-                <div class="link-status-monitor-container"></div>
+                <div class="link-status-monitors-grid"></div>
             `;
         } else {
             // 更新属性行（仅内容变化时）
@@ -519,22 +522,46 @@ export class TiangongSimulator {
             if (timeEl) timeEl.textContent = timeStr;
         }
 
-        // 更新监控画面 (仅在 URL 变化时操作，避免 iframe 重载)
-        const monitorContainer = el.querySelector(".link-status-monitor-container");
-        if (weldpoolUrl) {
-            let iframe = monitorContainer.querySelector(".monitor-mini-iframe");
-            if (!iframe) {
-                monitorContainer.innerHTML = `
-                    <div class="link-status-monitor">
-                        <div class="monitor-label">实时熔池</div>
-                        <iframe src="${weldpoolUrl}" class="monitor-mini-iframe"></iframe>
-                    </div>
-                `;
-            } else if (iframe.getAttribute("src") !== weldpoolUrl) {
-                iframe.src = weldpoolUrl;
+        // 更新监控画面
+        const gridContainer = el.querySelector(".link-status-monitors-grid");
+
+        if (welding && (weldpoolUrl || lasertrackUrl)) {
+            // 在焊接状态且有 URL 时，渲染并排画面
+            const renderMonitor = (label, url, className) => `
+                <div class="link-status-monitor-item">
+                    <div class="monitor-mini-label">${label}</div>
+                    <iframe src="${url}" class="monitor-mini-iframe ${className}"></iframe>
+                </div>
+            `;
+
+            let html = "";
+            if (weldpoolUrl) html += renderMonitor("实时熔池", weldpoolUrl, "weldpool-frame");
+            if (lasertrackUrl) html += renderMonitor("跟踪监控", lasertrackUrl, "track-frame");
+
+            // 判断是否需要完全替换内容（如果当前不是 monitor 列表）
+            if (!gridContainer.querySelector(".link-status-monitor-item")) {
+                gridContainer.innerHTML = html;
+                gridContainer.style.display = "grid";
+            } else {
+                // 如果已有 monitor，则更新 src 避免重载
+                const wpFrame = gridContainer.querySelector(".weldpool-frame");
+                const trFrame = gridContainer.querySelector(".track-frame");
+                if (wpFrame && wpFrame.getAttribute("src") !== weldpoolUrl) wpFrame.src = weldpoolUrl;
+                if (trFrame && trFrame.getAttribute("src") !== lasertrackUrl) trFrame.src = lasertrackUrl;
             }
         } else {
-            monitorContainer.innerHTML = "";
+            // 非焊接状态或无数据，显示占位符
+            if (!gridContainer.querySelector(".link-status-placeholder")) {
+                gridContainer.innerHTML = `
+                    <div class="link-status-placeholder">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        </svg>
+                        <span>系统监控待命</span>
+                    </div>
+                `;
+                gridContainer.style.display = "block";
+            }
         }
     }
 

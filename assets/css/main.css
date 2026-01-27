@@ -321,6 +321,32 @@ body {
     color: #e8f1ff;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
     backdrop-filter: blur(6px);
+    width: 320px;
+}
+
+.link-status-monitors-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.link-status-placeholder {
+    grid-column: span 2;
+    aspect-ratio: 16 / 6;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px dashed rgba(79, 195, 247, 0.3);
+    border-radius: 6px;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.8em;
+    gap: 4px;
+    margin-top: 8px;
 }
 
 .link-status-title {
@@ -350,18 +376,18 @@ body {
     font-family: "Courier New", monospace;
 }
 
-.link-status-monitor {
-    margin-top: 12px;
-    padding-top: 10px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    overflow: hidden; /* 确保裁剪生效 */
+.link-status-monitor-item {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
-.monitor-label {
-    font-size: 0.8em;
+.monitor-mini-label {
+    font-size: 0.7em;
     color: #4fc3f7;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     font-weight: bold;
+    text-align: center;
 }
 
 .monitor-mini-iframe {
@@ -370,7 +396,7 @@ body {
     border: 1px solid rgba(79, 195, 247, 0.3);
     border-radius: 4px;
     background: #000;
-    pointer-events: none; /* 禁止鼠标交互，防止触发视频播放器的控制条显示 */
+    pointer-events: none;
     object-fit: cover;
 }
 
