@@ -29,7 +29,7 @@ body {
 
 /* 右侧控制面板：固定宽度，半透明毛玻璃效果 */
 #control-panel {
-    width: 30%;
+    width: 25%;
     background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(10px);
     border-left: 1px solid rgba(255, 255, 255, 0.1);
