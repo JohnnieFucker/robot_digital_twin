@@ -141,6 +141,7 @@
                 height: 100%;
                 border: none;
                 display: block;
+                object-fit: fill;
             }
 
             .nav-link {
@@ -200,14 +201,14 @@
             <a href="tiangong.html" class="nav-link">返回 3D 数字孪生 &rsaquo;</a>
         </div>
         <div class="split-container">
-            <div class="monitor-panel">
+            <div class="monitor-panel" id="panel-weldpool">
                 <div class="monitor-label">熔池监控 (Weld Pool)</div>
-                <iframe src="http://10.13.120.108:8889/weldpool/?autoplay=1&controls=0" allow="autoplay; fullscreen"></iframe>
+                <iframe id="iframe-weldpool" src="http://10.13.120.108:8889/weldpool/?autoplay=1&controls=0" allow="autoplay; fullscreen"></iframe>
                 <div class="monitor-overlay"></div>
             </div>
-            <div class="monitor-panel">
+            <div class="monitor-panel" id="panel-lasertrack">
                 <div class="monitor-label">跟踪监控 (Laser Track)</div>
-                <iframe src="http://10.13.120.108:8889/lasertrack/?autoplay=1&controls=0" allow="autoplay; fullscreen"></iframe>
+                <iframe id="iframe-lasertrack" src="http://10.13.120.108:8889/lasertrack/?autoplay=1&controls=0" allow="autoplay; fullscreen"></iframe>
                 <div class="monitor-overlay"></div>
             </div>
         </div>
