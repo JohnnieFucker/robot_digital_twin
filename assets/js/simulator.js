@@ -25,7 +25,7 @@ export class TiangongSimulator {
         this.robotJointGroups = { Link1: [], Link2: [] };
         this.state = {
             robots: {
-                Link1: { name: "步兵1号", running: "连接中", mode: "单机", welding: null, joints: {}, weldpoolUrl: "http://10.13.120.108:8889/weldpool/?autoplay=1&controls=0", lasertrackUrl: "http://10.13.120.108:8889/lasertrack/?autoplay=1&controls=0" },
+                Link1: { name: "步兵1号", running: "连接中", mode: "单机", welding: null, joints: {}, weldpoolUrl: "https://test-ot.cgboiler.com/weldpool/?autoplay=1&controls=0", lasertrackUrl: "https://test-ot.cgboiler.com/lasertrack/?autoplay=1&controls=0" },
                 Link2: { name: "步兵2号", running: "连接中", mode: "单机", welding: null, joints: {}, weldpoolUrl: "", lasertrackUrl: "" }
             }
         };
