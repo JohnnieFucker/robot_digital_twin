@@ -3,7 +3,7 @@ export class MonitorManager {
         this.container = document.getElementById(containerId);
         this.monitors = [
             { id: 1, title: "现场监控", url: "https://dataease.cgboiler.com/#/de-link/LVfVeshS" },
-            { id: 2, title: "现场监控", url: "https://pv-monitor.cgboiler.com/?y1=rtsp://admin:center123@10.13.75.77/cam/realmonitor?channel=1&subtype=1" }
+            { id: 2, title: "现场监控", url: "https://pv-monitor.cgboiler.com/?y1=93f4f02557984e9fa6ac4e60df96adcd" }
         ];
     }
 
