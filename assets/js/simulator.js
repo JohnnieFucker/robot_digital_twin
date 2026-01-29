@@ -25,8 +25,8 @@ export class TiangongSimulator {
         this.robotJointGroups = { Link1: [], Link2: [] };
         this.state = {
             robots: {
-                Link1: { name: "步兵1号", running: "连接中", mode: "单机", welding: null, joints: {}, weldpoolUrl: "https://test-ot.cgboiler.com/weldpool/?autoplay=1&controls=0", lasertrackUrl: "https://test-ot.cgboiler.com/lasertrack/?autoplay=1&controls=0" },
-                Link2: { name: "步兵2号", running: "连接中", mode: "单机", welding: null, joints: {}, weldpoolUrl: "", lasertrackUrl: "" }
+                Link1: { name: "步兵1号", running: "连接中", mode: "单机", welding: null, current: 0, voltage: 0, joints: {}, weldpoolUrl: "https://test-ot.cgboiler.com/weldpool/?autoplay=1&controls=0", lasertrackUrl: "https://test-ot.cgboiler.com/lasertrack/?autoplay=1&controls=0" },
+                Link2: { name: "步兵2号", running: "连接中", mode: "单机", welding: null, current: 0, voltage: 0, joints: {}, weldpoolUrl: "", lasertrackUrl: "" }
             }
         };
 
@@ -418,6 +418,8 @@ export class TiangongSimulator {
                     运行: statusDisplay,
                     模式: robotState.mode || "未知",
                     焊接: robotState.welding === true ? "焊接中" : robotState.welding === false ? "等待中" : "-",
+                    电流: robotState.current ? `${robotState.current} A` : "-",
+                    电压: robotState.voltage ? `${robotState.voltage} V` : "-",
                     welding: !!robotState.welding,
                     weldpoolUrl: robotState.weldpoolUrl,
                     lasertrackUrl: robotState.lasertrackUrl

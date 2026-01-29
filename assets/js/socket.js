@@ -47,7 +47,7 @@ export class SocketManager {
             timeout: 10,
             userName: this.config.userName,
             password: this.config.password,
-            keepAliveInterval: 20, // 降低心跳间隔
+            keepAliveInterval: 120, // 降低心跳间隔
             cleanSession: true,
             mqttVersion: 4 // 明确指定 MQTT 3.1.1 (Level 4)
         };

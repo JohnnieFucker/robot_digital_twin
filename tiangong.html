@@ -151,7 +151,9 @@
                             status: status,
                             welding: isWelding,
                             tcpSpeed: data.tcpSpeed || 0,
-                            motionPercent: data.motionExecutionPercent || 0
+                            motionPercent: data.motionExecutionPercent || 0,
+                            current: data.current || 0,
+                            voltage: data.voltage || 0
                         });
                     }
                 });
