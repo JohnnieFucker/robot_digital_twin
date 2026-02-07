@@ -78,6 +78,9 @@
                 // 1. 初始化 3D 仿真器
                 window.simulator = new TiangongSimulator();
 
+                // 加载工件数字孪生
+                window.simulator.loadWorkpiece("./analyze.json");
+
                 // 2. 初始化视频监控
                 const monitorManager = new MonitorManager("monitor-container");
                 monitorManager.init();

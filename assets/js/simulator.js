@@ -58,6 +58,88 @@ export class TiangongSimulator {
     }
 
     /**
+     * 加载并渲染工件数字孪生
+     * @param {string} jsonPath 
+     */
+    async loadWorkpiece(jsonPath = "./analyze.json") {
+        try {
+            const response = await fetch(jsonPath);
+            const data = await response.json();
+            if (data.result !== "success") return;
+
+            const group = new THREE.Group();
+            group.name = "Workpiece_DigitalTwin";
+
+            // 1. 渲染圆柱体 (Pipes)
+            const cylMaterial = new THREE.MeshPhongMaterial({ color: 0xaaaaaa, shininess: 100 });
+            data.digital_twin.cylinders.forEach(cylData => {
+                const geometry = new THREE.CylinderGeometry(cylData.radius, cylData.radius, cylData.height, 32);
+                const mesh = new THREE.Mesh(geometry, cylMaterial);
+
+                // 设置位置
+                mesh.position.set(cylData.center.x, cylData.center.y, cylData.center.z);
+
+                // 设置方向 (Three.js Cylinder 默认沿 Y 轴，需要旋转到 axis 方向)
+                const axis = new THREE.Vector3(cylData.axis.x, cylData.axis.y, cylData.axis.z).normalize();
+                const quaternion = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), axis);
+                mesh.quaternion.copy(quaternion);
+
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                group.add(mesh);
+            });
+
+            // 2. 渲染平面 (Flat Steel)
+            const planeData = data.digital_twin.plane;
+            const planeGeom = new THREE.BoxGeometry(planeData.size.x, planeData.size.y, planeData.size.z);
+            const planeMat = new THREE.MeshPhongMaterial({ color: 0x888888, transparent: true, opacity: 0.8 });
+            const planeMesh = new THREE.Mesh(planeGeom, planeMat);
+
+            planeMesh.position.set(planeData.center.x, planeData.center.y, planeData.center.z);
+            
+            // 应用旋转矩阵
+            const m = planeData.rotation_matrix;
+            const matrix = new THREE.Matrix4().set(
+                m[0], m[1], m[2], 0,
+                m[3], m[4], m[5], 0,
+                m[6], m[7], m[8], 0,
+                0, 0, 0, 1
+            );
+            planeMesh.quaternion.setFromRotationMatrix(matrix);
+
+            planeMesh.receiveShadow = true;
+            group.add(planeMesh);
+
+            // 3. 渲染焊缝 (Weld Seams)
+            const seamMaterial = new THREE.LineBasicMaterial({ color: 0xffff00, linewidth: 2 });
+            data.weld_seams.forEach(seam => {
+                const points = [
+                    new THREE.Vector3(seam.start.x, seam.start.y, seam.start.z),
+                    new THREE.Vector3(seam.end.x, seam.end.y, seam.end.z)
+                ];
+                const geom = new THREE.BufferGeometry().setFromPoints(points);
+                const line = new THREE.Line(geom, seamMaterial);
+                group.add(line);
+            });
+
+            // 缩放处理：PCL 数据通常是 mm，Three.js 场景通常是 m
+            // 检查数据量级，如果很大则缩小 1000 倍
+            if (data.workpiece.length > 100) {
+                group.scale.set(0.001, 0.001, 0.001);
+            }
+
+            // 将工件放置在合适的位置（例如 base_link 附近或参考线区域）
+            // 根据 analyze.json 中的坐标，它们似乎是在某个相机坐标系下
+            // 这里先直接加入场景，可能需要根据实际情况调整 offset
+            this.scene.add(group);
+            
+            console.log("工件数字孪生加载完成");
+        } catch (e) {
+            console.error("加载工件数据失败:", e);
+        }
+    }
+
+    /**
      * 初始化流程
      */
     init() {
