@@ -80,7 +80,7 @@
     <axis
       xyz="1 0 0" />
     <limit
-      lower="0"
+      lower="0.1"
       upper="14"
       effort="0"
       velocity="0" />
@@ -120,7 +120,7 @@
     name="joint1-0"
     type="prismatic">
     <origin
-      xyz="-0.0057039 3.1015 -2.5569"
+      xyz="-0.0057039 1.8015 -2.5569"
       rpy="-1.5708 0 -1.5708" />
     <parent
       link="Link1" />
@@ -129,8 +129,8 @@
     <axis
       xyz="1 0 0" />
     <limit
-      lower="0"
-      upper="1.7"
+      lower="-1.38"
+      upper="-0.1"
       effort="0"
       velocity="0"/>
   </joint>
@@ -176,7 +176,7 @@
     <child
       link="Link1-1" />
     <axis
-      xyz="0 -1 0" />
+      xyz="0 1 0" />
     <limit
       lower="-3.14"
       upper="3.14"

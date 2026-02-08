@@ -1,6 +1,7 @@
 import * as THREE from "./three.module.js";
 import { OrbitControls } from "./OrbitControls.js";
 import URDFLoader from "./URDFLoader.js";
+import { PLYLoader } from "./PLYLoader.js";
 
 THREE.Object3D.DEFAULT_UP.set(0, 0, 1);
 
@@ -59,7 +60,7 @@ export class TiangongSimulator {
 
     /**
      * 加载并渲染工件数字孪生
-     * @param {string} jsonPath 
+     * @param {string} jsonPath
      */
     async loadWorkpiece(jsonPath = "./analyze.json") {
         try {
@@ -72,7 +73,7 @@ export class TiangongSimulator {
 
             // 1. 渲染圆柱体 (Pipes)
             const cylMaterial = new THREE.MeshPhongMaterial({ color: 0xaaaaaa, shininess: 100 });
-            data.digital_twin.cylinders.forEach(cylData => {
+            data.digital_twin.cylinders.forEach((cylData) => {
                 const geometry = new THREE.CylinderGeometry(cylData.radius, cylData.radius, cylData.height, 32);
                 const mesh = new THREE.Mesh(geometry, cylMaterial);
 
@@ -96,15 +97,10 @@ export class TiangongSimulator {
             const planeMesh = new THREE.Mesh(planeGeom, planeMat);
 
             planeMesh.position.set(planeData.center.x, planeData.center.y, planeData.center.z);
-            
+
             // 应用旋转矩阵
             const m = planeData.rotation_matrix;
-            const matrix = new THREE.Matrix4().set(
-                m[0], m[1], m[2], 0,
-                m[3], m[4], m[5], 0,
-                m[6], m[7], m[8], 0,
-                0, 0, 0, 1
-            );
+            const matrix = new THREE.Matrix4().set(m[0], m[1], m[2], 0, m[3], m[4], m[5], 0, m[6], m[7], m[8], 0, 0, 0, 0, 1);
             planeMesh.quaternion.setFromRotationMatrix(matrix);
 
             planeMesh.receiveShadow = true;
@@ -112,11 +108,8 @@ export class TiangongSimulator {
 
             // 3. 渲染焊缝 (Weld Seams)
             const seamMaterial = new THREE.LineBasicMaterial({ color: 0xffff00, linewidth: 2 });
-            data.weld_seams.forEach(seam => {
-                const points = [
-                    new THREE.Vector3(seam.start.x, seam.start.y, seam.start.z),
-                    new THREE.Vector3(seam.end.x, seam.end.y, seam.end.z)
-                ];
+            data.weld_seams.forEach((seam) => {
+                const points = [new THREE.Vector3(seam.start.x, seam.start.y, seam.start.z), new THREE.Vector3(seam.end.x, seam.end.y, seam.end.z)];
                 const geom = new THREE.BufferGeometry().setFromPoints(points);
                 const line = new THREE.Line(geom, seamMaterial);
                 group.add(line);
@@ -132,10 +125,59 @@ export class TiangongSimulator {
             // 根据 analyze.json 中的坐标，它们似乎是在某个相机坐标系下
             // 这里先直接加入场景，可能需要根据实际情况调整 offset
             this.scene.add(group);
-            
+
             console.log("工件数字孪生加载完成");
         } catch (e) {
             console.error("加载工件数据失败:", e);
+        }
+    }
+
+    /**
+     * 加载并渲染 PLY 点云数据
+     * @param {string} url
+     */
+    async loadPointCloud(url = "./cloud.ply") {
+        try {
+            const loader = new PLYLoader();
+            const geometry = await new Promise((resolve, reject) => {
+                loader.load(url, resolve, undefined, reject);
+            });
+
+            // 检查是否有索引或面，如果有则渲染为 Mesh，否则渲染为 Points
+            let object;
+            if (geometry.index !== null || (geometry.attributes.position && geometry.attributes.position.count > 0 && geometry.index)) {
+                const material = new THREE.MeshPhongMaterial({
+                    color: 0xcccccc,
+                    flatShading: true,
+                    vertexColors: geometry.getAttribute("color") !== undefined
+                });
+                object = new THREE.Mesh(geometry, material);
+            } else {
+                const material = new THREE.PointsMaterial({
+                    size: 0.005,
+                    vertexColors: geometry.getAttribute("color") !== undefined
+                });
+                object = new THREE.Points(geometry, material);
+            }
+
+            object.name = "PointCloud_" + url.split("/").pop();
+
+            // 缩放处理：通常扫描数据是 mm
+            // 简单的启发式判断：如果 bounding box 很大，则缩小 1000 倍
+            geometry.computeBoundingBox();
+            const box = geometry.boundingBox;
+            const size = new THREE.Vector3();
+            box.getSize(size);
+
+            if (size.length() > 100) {
+                object.scale.set(0.001, 0.001, 0.001);
+            }
+
+            this.scene.add(object);
+            console.log(`点云加载完成: ${url}, 顶点数: ${geometry.attributes.position.count}`);
+            return object;
+        } catch (e) {
+            console.error("加载 PLY 点云失败:", e);
         }
     }
 
@@ -654,7 +696,7 @@ export class TiangongSimulator {
      * 在每帧渲染前调用，实现平滑移动效果
      */
     updateJointsSmoothing() {
-        const smoothingFactor = 0.01; // 进一步调低，让移动时间接近 1 秒的消息周期
+        const smoothingFactor = 0.05; // 提高平滑因子，缩短同步延迟
         const minStep = 0.0001;
 
         [this.state.robots.Link1, this.state.robots.Link2].forEach((robotState) => {

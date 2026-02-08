@@ -93,6 +93,7 @@ export class SocketManager {
                 } catch (e) {
                     data = message.payloadString;
                 }
+                console.log("收到 MQTT 消息: ", data);
                 this.onMessage(data, message.destinationName);
             } catch (error) {
                 console.error("处理 MQTT 消息失败:", error);

@@ -79,7 +79,9 @@
                 window.simulator = new TiangongSimulator();
 
                 // 加载工件数字孪生
-                window.simulator.loadWorkpiece("./analyze.json");
+                // window.simulator.loadWorkpiece("./analyze.json");
+                // 加载 PLY 点云
+                window.simulator.loadPointCloud("./cloud.ply");
 
                 // 2. 初始化视频监控
                 const monitorManager = new MonitorManager("monitor-container");
@@ -143,6 +145,19 @@
                             jointUpdates[jointName] = (data.jnts[i] * Math.PI) / 180;
                         }
 
+                        // 更新外部轴关节角度 (exJnts)
+                        if (data.exJnts && Array.isArray(data.exJnts)) {
+                            if (robotId === "tgRobot_1") {
+                                // 1号机器人外轴：joint1 对应 exJnts[0], joint1-0 对应 exJnts[1]（从mm转为m）
+                                if (data.exJnts.length >= 1) jointUpdates["joint1"] = data.exJnts[0] / 1000;
+                                if (data.exJnts.length >= 2) jointUpdates["joint1-0"] = data.exJnts[1] / 1000;
+                            } else {
+                                // 2号机器人外轴：joint2 对应 exJnts[0], joint2-0 对应 exJnts[1]（从mm转为m）
+                                if (data.exJnts.length >= 1) jointUpdates["joint2"] = data.exJnts[0] / 1000;
+                                if (data.exJnts.length >= 2) jointUpdates["joint2-0"] = data.exJnts[1] / 1000;
+                            }
+                        }
+
                         if (window.setRobotJoints) {
                             window.setRobotJoints(robotKey, jointUpdates);
                         }
@@ -163,6 +178,7 @@
 
                 // 4. 暴露全局接口方便外部调用
                 window.tgGetState = () => window.simulator.state;
+                window.loadPointCloud = (url) => window.simulator.loadPointCloud(url);
 
                 window.setRobotData = (robotKey, patch) => {
                     const r = window.simulator.state.robots[robotKey];
